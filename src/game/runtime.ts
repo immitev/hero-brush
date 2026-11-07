@@ -2,13 +2,13 @@
  * Mutable per-frame session state shared between the session runner (rAF loop)
  * and the R3F scene. Deliberately NOT in React state: it changes every frame.
  */
-import type { AttackKind } from '../heroes/types';
 import type { Vec3 } from './mouth';
 import { ZONE_COUNT } from './zones';
 
 export type Phase = 'idle' | 'countdown' | 'playing' | 'victory';
 
-export type MonsterState = 'rising' | 'alive' | 'cocooned' | 'dying';
+/** rising → alive → foamed (scrubbed, covered in foam, squeezing) → dying (pop) */
+export type MonsterState = 'rising' | 'alive' | 'foamed' | 'dying';
 
 export interface Monster {
   id: number;
@@ -20,24 +20,33 @@ export interface Monster {
   stateAt: number;
   bornAt: number;
   seed: number;
-  /** Set when a projectile is already flying towards it. */
-  targeted: boolean;
+  /** Foam coverage 0..1 built up by scrubbing. */
+  foam: number;
 }
 
-export interface Projectile {
-  id: number;
-  kind: AttackKind;
-  from: Vec3;
-  to: Vec3;
-  bornAt: number;
-  duration: number;
-  /** Monster id or -1 for the boss. */
+export type HeroState = 'idle' | 'travel' | 'scrub';
+
+export interface HeroSim {
+  pos: Vec3;
+  /** Unit horizontal facing direction. */
+  facing: Vec3;
+  state: HeroState;
+  /** Monster id being scrubbed, -1 for the boss, 0 for none. */
   targetId: number;
+  /** Point the brush aims at (monster / boss surface). */
+  aim: Vec3 | null;
+  scrubStartedAt: number;
+  /** Index of the last scrub stroke (8th notes). */
+  lastStroke: number;
+  /** Speed of the last move, for travel animations. */
+  speed: number;
 }
 
 export type FxEvent =
   | { type: 'pop'; pos: Vec3; color: string; count?: number }
-  | { type: 'hit'; pos: Vec3; color: string }
+  | { type: 'scrub'; pos: Vec3; normal: Vec3 }
+  | { type: 'foamed'; pos: Vec3 }
+  | { type: 'bossFoam'; pos: Vec3 }
   | { type: 'bossHit'; pos: Vec3 }
   | { type: 'bossDefeated'; pos: Vec3 }
   | { type: 'zoneClean'; zoneIndex: number }
@@ -48,6 +57,8 @@ export interface Runtime {
   paused: boolean;
   /** Game seconds since the session started (0..120). */
   elapsed: number;
+  /** Game time of the previous simulation step. */
+  lastSimT: number;
   /** Seconds since countdown started (phase 'countdown'). */
   countdownT: number;
   /** Seconds since victory started. */
@@ -58,22 +69,16 @@ export interface Runtime {
   bossActive: boolean;
   /** 1 = full health, 0 = defeated. */
   bossHealth: number;
+  bossPos: Vec3;
   bossHitAt: number;
+  /** Foam coverage on the boss 0..1. */
+  bossFoam: number;
   monsters: Monster[];
-  projectiles: Projectile[];
+  hero: HeroSim;
   events: FxEvent[];
   nextId: number;
   lastSpawnAt: number;
   nextSpawnIn: number;
-  lastAttackBeat: number;
-  /** Game time of the hero's last attack (for the arm animation). */
-  heroAttackAt: number;
-  /** World position the hero is aiming at. */
-  heroAim: Vec3 | null;
-  /** Hero's current world position (written by the scene). */
-  heroPos: Vec3;
-  /** Hero's hand position (written by the scene, used as projectile origin). */
-  heroHand: Vec3;
   /** Camera shake intensity 0..1 (decays). */
   shake: number;
   kills: number;
@@ -84,6 +89,7 @@ export function createRuntime(): Runtime {
     phase: 'idle',
     paused: false,
     elapsed: 0,
+    lastSimT: 0,
     countdownT: 0,
     victoryT: 0,
     zoneIndex: 0,
@@ -91,18 +97,24 @@ export function createRuntime(): Runtime {
     zoneClean: new Array(ZONE_COUNT).fill(0),
     bossActive: false,
     bossHealth: 1,
+    bossPos: [0.45, 0.1, 3.2],
     bossHitAt: -10,
+    bossFoam: 0,
     monsters: [],
-    projectiles: [],
+    hero: {
+      pos: [0, -0.3, 4.5],
+      facing: [0, 0, 1],
+      state: 'idle',
+      targetId: 0,
+      aim: null,
+      scrubStartedAt: -10,
+      lastStroke: -1,
+      speed: 0,
+    },
     events: [],
     nextId: 1,
     lastSpawnAt: -10,
     nextSpawnIn: 0.6,
-    lastAttackBeat: -1,
-    heroAttackAt: -10,
-    heroAim: null,
-    heroPos: [0, 0, 4],
-    heroHand: [0, 1, 4],
     shake: 0,
     kills: 0,
   };

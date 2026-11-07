@@ -1,4 +1,4 @@
-export type AttackKind = 'beam' | 'web' | 'batarang';
+/** How the hero travels between teeth: jets, swings on a web line, or glides with a cape. */
 export type MovementKind = 'hover' | 'swing' | 'glide';
 
 export interface HeroPalette {
@@ -10,8 +10,8 @@ export interface HeroPalette {
   accent: string;
   /** Glowing parts: reactor, lenses, eyes. */
   glow: string;
-  /** Projectile / attack colour. */
-  attack: string;
+  /** Toothbrush handle colour. */
+  brush: string;
   /** Exposed skin (Batman's chin). */
   skin?: string;
 }
@@ -34,10 +34,9 @@ export interface HeroPack {
   id: string;
   name: string;
   tagline: string;
-  attack: AttackKind;
   movement: MovementKind;
-  /** Beats between attacks at 120 bpm (1 = every beat). */
-  attackEveryBeats: number;
+  /** World units per second when travelling between teeth. */
+  travelSpeed: number;
   suits: Suit[];
   voice: HeroVoice;
   /** UI colours. */

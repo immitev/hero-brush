@@ -4,47 +4,41 @@ import * as THREE from 'three';
 import { RoundedBoxGeometry } from 'three/examples/jsm/geometries/RoundedBoxGeometry.js';
 import { ARCH_RX, ARCH_RZ, LOWER_GUM_Y, TEETH, type ToothDef, UPPER_GUM_Y, zonesForTooth } from '../game/mouth';
 import { runtime } from '../game/runtime';
-import { ToothMaterial, toon } from './materials';
+import { GradientBackdropMaterial, ToothMaterial, toon } from './materials';
 
+/**
+ * Cute tooth shapes: a well-rounded crown that bellies out in the middle,
+ * narrows towards the gum, with soft cusps on molars and a gentle edge on
+ * incisors. Local +Y is the chewing surface, local +Z the outside.
+ */
 function toothGeometry(t: ToothDef): THREE.BufferGeometry {
   const [w, h, d] = t.size;
-  const radius = t.kind === 'molar' ? 0.22 : t.kind === 'incisor' ? 0.12 : 0.16;
-  const geo = new RoundedBoxGeometry(w, h, d, 4, radius);
-  if (t.kind === 'molar' || t.kind === 'premolar') {
-    // chewing surface: dimple the top (local +Y) a little for cusps
-    const pos = geo.attributes.position as THREE.BufferAttribute;
-    for (let i = 0; i < pos.count; i++) {
-      const x = pos.getX(i);
-      const y = pos.getY(i);
-      const z = pos.getZ(i);
-      if (y > h * 0.3) {
-        const bump = Math.cos((x / w) * Math.PI * 2) * Math.cos((z / d) * Math.PI * 2);
-        pos.setY(i, y - 0.05 + bump * 0.05);
-      }
+  const radius = Math.min(w, d) * (t.kind === 'incisor' ? 0.36 : 0.45);
+  const geo = new RoundedBoxGeometry(w, h, d, 6, radius);
+  const pos = geo.attributes.position as THREE.BufferAttribute;
+  for (let i = 0; i < pos.count; i++) {
+    const x = pos.getX(i);
+    const y = pos.getY(i);
+    const z = pos.getZ(i);
+    const u = y / h + 0.5; // 0 at the gum, 1 at the chewing edge
+    // belly in the middle, neck towards the gum
+    let k = 0.86 + 0.18 * Math.sin(Math.PI * Math.min(1, u * 1.1));
+    if (t.kind === 'canine' && u > 0.55) k *= 1 - (u - 0.55) * 0.9;
+    if (t.kind === 'incisor' && u > 0.5) k *= 1 - (u - 0.5) * 0.25;
+    let nx = x * k;
+    let nz = z * (t.kind === 'incisor' && u > 0.5 ? k * (1 - (u - 0.5) * 0.5) : k);
+    let ny = y;
+    if ((t.kind === 'molar' || t.kind === 'premolar') && y > h * 0.3) {
+      // soft cusps
+      const bump = Math.cos((x / w) * Math.PI * 2) * Math.cos((z / d) * Math.PI * 2);
+      ny = y - 0.03 + bump * 0.035;
     }
-    pos.needsUpdate = true;
-    geo.computeVertexNormals();
-  } else if (t.kind === 'canine') {
-    const pos = geo.attributes.position as THREE.BufferAttribute;
-    for (let i = 0; i < pos.count; i++) {
-      const y = pos.getY(i);
-      if (y > 0) {
-        const k = 1 - (y / (h / 2)) * 0.45;
-        pos.setX(i, pos.getX(i) * k);
-        pos.setZ(i, pos.getZ(i) * k);
-      }
-    }
-    pos.needsUpdate = true;
-    geo.computeVertexNormals();
-  } else {
-    const pos = geo.attributes.position as THREE.BufferAttribute;
-    for (let i = 0; i < pos.count; i++) {
-      const y = pos.getY(i);
-      if (y > 0) pos.setZ(i, pos.getZ(i) * (1 - (y / (h / 2)) * 0.35));
-    }
-    pos.needsUpdate = true;
-    geo.computeVertexNormals();
+    pos.setXYZ(i, nx, ny, nz);
+    void nx;
+    void nz;
   }
+  pos.needsUpdate = true;
+  geo.computeVertexNormals();
   return geo;
 }
 
@@ -52,7 +46,6 @@ function Tooth({ def }: { def: ToothDef }) {
   const material = useMemo(() => new ToothMaterial(), []);
   const geometry = useMemo(() => toothGeometry(def), [def]);
   const zones = useMemo(() => zonesForTooth(def), [def]);
-  // Orientation: local +Z faces outward, local +Y towards the chewing surface.
   const rotation = useMemo<[number, number, number]>(() => {
     const yaw = Math.atan2(def.outward[0], def.outward[2]);
     return def.row === 'upper' ? [Math.PI, -yaw, 0] : [0, yaw, 0];
@@ -65,7 +58,7 @@ function Tooth({ def }: { def: ToothDef }) {
     u.uTime.value = state.clock.elapsedTime;
   });
 
-  return <mesh geometry={geometry} material={material} position={def.pos} rotation={rotation} castShadow receiveShadow />;
+  return <mesh geometry={geometry} material={material} position={def.pos} rotation={rotation} />;
 }
 
 function archCurve(y: number, scale = 1, lift = 0): THREE.CatmullRomCurve3 {
@@ -78,11 +71,16 @@ function archCurve(y: number, scale = 1, lift = 0): THREE.CatmullRomCurve3 {
   return new THREE.CatmullRomCurve3(pts);
 }
 
+const GUM = '#f6a9c4';
+const GUM_DEEP = '#ef93b4';
+const LIP = '#f08bb3';
+const TONGUE = '#f47c9d';
+
 function Gums() {
-  const gumMat = useMemo(() => toon('#f06a8a'), []);
-  const gumDark = useMemo(() => toon('#d64f74'), []);
-  const upper = useMemo(() => new THREE.TubeGeometry(archCurve(UPPER_GUM_Y + 0.32, 1.0), 48, 0.6, 14, false), []);
-  const lower = useMemo(() => new THREE.TubeGeometry(archCurve(LOWER_GUM_Y - 0.32, 1.0), 48, 0.6, 14, false), []);
+  const gumMat = useMemo(() => toon(GUM), []);
+  const gumDark = useMemo(() => toon(GUM_DEEP), []);
+  const upper = useMemo(() => new THREE.TubeGeometry(archCurve(UPPER_GUM_Y + 0.32, 1.0), 48, 0.6, 16, false), []);
+  const lower = useMemo(() => new THREE.TubeGeometry(archCurve(LOWER_GUM_Y - 0.32, 1.0), 48, 0.6, 16, false), []);
   const upperInner = useMemo(() => new THREE.TubeGeometry(archCurve(UPPER_GUM_Y + 0.55, 0.78), 40, 0.5, 12, false), []);
   const lowerInner = useMemo(() => new THREE.TubeGeometry(archCurve(LOWER_GUM_Y - 0.55, 0.78), 40, 0.5, 12, false), []);
   return (
@@ -93,22 +91,23 @@ function Gums() {
       <mesh geometry={lowerInner} material={gumDark} />
       {/* palate */}
       <mesh position={[0, UPPER_GUM_Y + 1.1, -0.6]} scale={[2.9, 0.9, 2.9]} material={gumDark}>
-        <sphereGeometry args={[1, 24, 16, 0, Math.PI * 2, 0, Math.PI / 2]} />
+        <sphereGeometry args={[1, 28, 18, 0, Math.PI * 2, 0, Math.PI / 2]} />
       </mesh>
       <mesh position={[0, UPPER_GUM_Y + 1.1, -0.6]} rotation={[Math.PI, 0, 0]} scale={[2.9, 0.2, 2.9]} material={gumDark}>
-        <sphereGeometry args={[1, 24, 8, 0, Math.PI * 2, 0, Math.PI / 2]} />
+        <sphereGeometry args={[1, 28, 8, 0, Math.PI * 2, 0, Math.PI / 2]} />
       </mesh>
       {/* floor of the mouth */}
       <mesh position={[0, LOWER_GUM_Y - 1.0, -0.6]} rotation={[Math.PI, 0, 0]} scale={[2.9, 0.8, 2.9]} material={gumDark}>
-        <sphereGeometry args={[1, 24, 16, 0, Math.PI * 2, 0, Math.PI / 2]} />
+        <sphereGeometry args={[1, 28, 18, 0, Math.PI * 2, 0, Math.PI / 2]} />
       </mesh>
     </group>
   );
 }
 
 function Tongue() {
-  const mat = useMemo(() => toon('#e84a6f'), []);
-  const ref = useRef<THREE.Mesh>(null);
+  const mat = useMemo(() => toon(TONGUE), []);
+  const tip = useMemo(() => toon('#f78fac'), []);
+  const ref = useRef<THREE.Group>(null);
   useFrame((state) => {
     if (!ref.current) return;
     const t = state.clock.elapsedTime;
@@ -116,16 +115,25 @@ function Tongue() {
     ref.current.rotation.x = -0.15 + Math.sin(t * 0.9) * 0.03;
   });
   return (
-    <mesh ref={ref} position={[0, LOWER_GUM_Y - 0.25, -0.8]} scale={[1.9, 0.55, 2.4]} material={mat}>
-      <sphereGeometry args={[1, 28, 18]} />
-    </mesh>
+    <group ref={ref} position={[0, LOWER_GUM_Y - 0.25, -0.8]}>
+      <mesh scale={[1.9, 0.5, 2.4]} material={mat}>
+        <sphereGeometry args={[1, 32, 20]} />
+      </mesh>
+      {/* glossy highlight blob + friendly rounded tip */}
+      <mesh position={[0, 0.35, 1.6]} scale={[1.2, 0.35, 0.9]} material={tip}>
+        <sphereGeometry args={[1, 20, 12]} />
+      </mesh>
+      <mesh position={[-0.5, 0.42, 0.4]} scale={[0.5, 0.08, 0.7]} material={tip}>
+        <sphereGeometry args={[1, 14, 10]} />
+      </mesh>
+    </group>
   );
 }
 
 function Lips() {
-  const mat = useMemo(() => toon('#d6336c'), []);
-  const upper = useMemo(() => new THREE.TubeGeometry(archCurve(UPPER_GUM_Y + 1.25, 1.36, -0.1), 48, 0.42, 12, false), []);
-  const lower = useMemo(() => new THREE.TubeGeometry(archCurve(LOWER_GUM_Y - 1.25, 1.36, 0.1), 48, 0.42, 12, false), []);
+  const mat = useMemo(() => toon(LIP), []);
+  const upper = useMemo(() => new THREE.TubeGeometry(archCurve(UPPER_GUM_Y + 1.25, 1.36, -0.1), 48, 0.42, 14, false), []);
+  const lower = useMemo(() => new THREE.TubeGeometry(archCurve(LOWER_GUM_Y - 1.25, 1.36, 0.1), 48, 0.42, 14, false), []);
   return (
     <group>
       <mesh geometry={upper} material={mat} />
@@ -134,18 +142,11 @@ function Lips() {
   );
 }
 
-function Interior() {
-  const mat = useMemo(
-    () =>
-      new THREE.MeshToonMaterial({
-        color: '#5a1d3f',
-        side: THREE.BackSide,
-      }),
-    [],
-  );
+function Backdrop() {
+  const mat = useMemo(() => new GradientBackdropMaterial('#ffd3e4', '#b7628e'), []);
   return (
     <mesh material={mat} position={[0, 0, -2]}>
-      <sphereGeometry args={[16, 32, 24]} />
+      <sphereGeometry args={[18, 32, 24]} />
     </mesh>
   );
 }
@@ -153,7 +154,7 @@ function Interior() {
 export function Arena() {
   return (
     <group>
-      <Interior />
+      <Backdrop />
       <Gums />
       <Lips />
       <Tongue />
@@ -167,10 +168,10 @@ export function Arena() {
 export function Lights() {
   return (
     <>
-      <hemisphereLight args={['#ffe9f3', '#5a1d3f', 0.9]} />
-      <directionalLight position={[4, 8, 6]} intensity={2.2} color="#fff4e0" />
-      <directionalLight position={[-6, 2, 4]} intensity={0.7} color="#9fd8ff" />
-      <pointLight position={[0, 0.4, 2]} intensity={6} distance={9} color="#ffd1e8" />
+      <hemisphereLight args={['#fff6fa', '#d98ab0', 0.95]} />
+      <directionalLight position={[4, 8, 6]} intensity={1.25} color="#fff7ec" />
+      <directionalLight position={[-6, 2, 4]} intensity={0.55} color="#cfe6ff" />
+      <pointLight position={[0, 0.4, 3]} intensity={1.4} distance={10} color="#ffe3ef" />
     </>
   );
 }

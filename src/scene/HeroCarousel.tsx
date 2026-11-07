@@ -37,7 +37,10 @@ function Ring({ index, suits, setFacing }: { index: number; suits: Record<string
     while (d < -Math.PI) d += Math.PI * 2;
     angle.current += d * (1 - Math.exp(-dt * 6));
     g.rotation.y = angle.current;
-    for (const a of anims.current) a.modeT = state.clock.elapsedTime;
+    for (const a of anims.current) {
+      a.modeT = state.clock.elapsedTime;
+      a.speed = 0;
+    }
     if (lastReported.current !== index) {
       lastReported.current = index;
       setFacing(index);

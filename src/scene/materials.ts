@@ -2,10 +2,10 @@ import * as THREE from 'three';
 
 let gradient: THREE.DataTexture | null = null;
 
-/** 4-step gradient map that gives MeshToonMaterial its cel-shaded look. */
+/** Soft 4-step gradient map that gives MeshToonMaterial a gentle cel-shaded look. */
 export function toonGradient(): THREE.DataTexture {
   if (gradient) return gradient;
-  const data = new Uint8Array([80, 150, 215, 255]);
+  const data = new Uint8Array([120, 175, 225, 255]);
   gradient = new THREE.DataTexture(data, 4, 1, THREE.RedFormat);
   gradient.minFilter = THREE.NearestFilter;
   gradient.magFilter = THREE.NearestFilter;
@@ -24,19 +24,20 @@ export function glow(color: THREE.ColorRepresentation, intensity = 2.2): THREE.M
 }
 
 /**
- * Tooth material: cel-shaded, with a `cleanliness` pair (outer/inner surface)
- * that fades procedural grime blotches and a yellow tint into glossy white with
- * twinkling sparkles. Local +Z must point outward (lip/cheek side) and local +Y
- * towards the chewing surface.
+ * Tooth material: cel-shaded ivory with a `cleanliness` pair (outer/inner
+ * surface). Dirty teeth are only lightly warm-tinted with a few soft, pale
+ * plaque spots; clean teeth are bright white with gloss and twinkling sparkles.
+ * Local +Z must point outward (lip/cheek side) and local +Y towards the chewing
+ * surface.
  */
 export class ToothMaterial extends THREE.MeshToonMaterial {
   readonly uniforms = {
     uCleanOuter: { value: 0 },
     uCleanInner: { value: 0 },
     uTime: { value: 0 },
-    uGrimeColor: { value: new THREE.Color('#8a7a2c') },
-    uYellowColor: { value: new THREE.Color('#e9d98a') },
-    uCleanColor: { value: new THREE.Color('#eef1f8') },
+    uSpotColor: { value: new THREE.Color('#e6d6a3') },
+    uDirtyColor: { value: new THREE.Color('#f6efd8') },
+    uCleanColor: { value: new THREE.Color('#fbfbff') },
   };
 
   constructor() {
@@ -63,8 +64,8 @@ export class ToothMaterial extends THREE.MeshToonMaterial {
            uniform float uCleanOuter;
            uniform float uCleanInner;
            uniform float uTime;
-           uniform vec3 uGrimeColor;
-           uniform vec3 uYellowColor;
+           uniform vec3 uSpotColor;
+           uniform vec3 uDirtyColor;
            uniform vec3 uCleanColor;
            varying vec3 vObjPos;
            varying vec3 vObjNormal;
@@ -89,11 +90,12 @@ export class ToothMaterial extends THREE.MeshToonMaterial {
           `#include <color_fragment>
            float outerMask = smoothstep(-0.2, 0.3, vObjNormal.z);
            hbClean = mix(uCleanInner, uCleanOuter, outerMask);
-           float n = hb_noise(vObjPos * 7.0) * 0.55 + hb_noise(vObjPos * 19.0) * 0.45;
-           float th = 0.42 + hbClean * 0.66;
-           float spots = smoothstep(th, th + 0.1, n);
-           vec3 base = mix(uYellowColor, uCleanColor, smoothstep(0.0, 1.0, hbClean));
-           base = mix(base, uGrimeColor, spots * 0.9);
+           // a few soft, round plaque spots that fade away as the tooth gets cleaner
+           float n = hb_noise(vObjPos * 4.5 + 3.0);
+           float th = 0.64 + hbClean * 0.5;
+           float spots = smoothstep(th, th + 0.14, n) * 0.55;
+           vec3 base = mix(uDirtyColor, uCleanColor, smoothstep(0.0, 1.0, hbClean));
+           base = mix(base, uSpotColor, spots);
            diffuseColor.rgb *= base;`,
         )
         .replace(
@@ -101,16 +103,45 @@ export class ToothMaterial extends THREE.MeshToonMaterial {
           `#include <emissivemap_fragment>
            vec3 hbView = normalize(vViewPosition);
            vec3 hbHalf = normalize(hbView + normalize(vec3(0.35, 0.9, 0.5)));
-           float hbSpec = pow(max(dot(normal, hbHalf), 0.0), 56.0);
+           float hbSpec = pow(max(dot(normal, hbHalf), 0.0), 48.0);
            float hbRim = pow(1.0 - max(dot(normal, hbView), 0.0), 3.0);
-           float gloss = mix(0.12, 1.0, hbClean);
-           totalEmissiveRadiance += vec3(hbSpec * 0.8 * gloss + hbRim * 0.1 * gloss);
+           float gloss = mix(0.3, 1.0, hbClean);
+           totalEmissiveRadiance += vec3(hbSpec * 0.45 * gloss + hbRim * 0.06 * gloss);
            float tw = hb_hash(floor(vObjPos * 11.0) + floor(uTime * 3.0));
            float sp = step(0.982, tw) * smoothstep(0.8, 1.0, hbClean);
            totalEmissiveRadiance += vec3(1.6, 1.6, 1.8) * sp;`,
         );
     };
-    // make sure three re-caches the program for this material
-    this.customProgramCacheKey = () => 'hero-brush-tooth';
+    this.customProgramCacheKey = () => 'hero-brush-tooth-v3';
+  }
+}
+
+/** Vertical gradient sphere used as the mouth backdrop (seen from the inside). */
+export class GradientBackdropMaterial extends THREE.ShaderMaterial {
+  constructor(top: THREE.ColorRepresentation, bottom: THREE.ColorRepresentation) {
+    super({
+      side: THREE.BackSide,
+      depthWrite: false,
+      fog: false,
+      uniforms: {
+        uTop: { value: new THREE.Color(top) },
+        uBottom: { value: new THREE.Color(bottom) },
+      },
+      vertexShader: `
+        varying float vY;
+        void main() {
+          vY = normalize(position).y;
+          gl_Position = projectionMatrix * modelViewMatrix * vec4(position, 1.0);
+        }`,
+      fragmentShader: `
+        uniform vec3 uTop;
+        uniform vec3 uBottom;
+        varying float vY;
+        void main() {
+          float k = smoothstep(-0.8, 0.9, vY);
+          gl_FragColor = vec4(mix(uBottom, uTop, k), 1.0);
+          #include <colorspace_fragment>
+        }`,
+    });
   }
 }

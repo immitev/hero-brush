@@ -3,10 +3,9 @@ import type { HeroPack } from '../types';
 export const ironman: HeroPack = {
   id: 'ironman',
   name: 'Iron Man',
-  tagline: 'Repulsor blasts. Plaque never stood a chance.',
-  attack: 'beam',
+  tagline: 'Jets from tooth to tooth and power-scrubs the gunk.',
   movement: 'hover',
-  attackEveryBeats: 1,
+  travelSpeed: 7,
   suits: [
     {
       id: 'classic',
@@ -16,7 +15,7 @@ export const ironman: HeroPack = {
         secondary: '#f2b134',
         accent: '#8a0b1f',
         glow: '#8ff7ff',
-        attack: '#9af5ff',
+        brush: '#f2b134',
       },
     },
     {
@@ -27,15 +26,15 @@ export const ironman: HeroPack = {
         secondary: '#6c7384',
         accent: '#15171d',
         glow: '#7fb0ff',
-        attack: '#9fc4ff',
+        brush: '#7fb0ff',
       },
     },
   ],
   voice: {
     select: 'Suit up. Let us polish those teeth.',
-    start: 'Repulsors online. Brush time!',
+    start: 'Jet brush online. Brush time!',
     midway: 'Halfway there. Keep brushing!',
-    boss: 'The Cavity King! Full power!',
+    boss: 'The Cavity King! Full scrub power!',
     victory: 'Sparkling clean. Mission complete!',
   },
   ui: { bg: '#5a0f1f', fg: '#ffd166' },

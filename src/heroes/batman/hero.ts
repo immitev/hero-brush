@@ -3,10 +3,9 @@ import type { HeroPack } from '../types';
 export const batman: HeroPack = {
   id: 'batman',
   name: 'Batman',
-  tagline: 'Batarangs from the shadows of the molars.',
-  attack: 'batarang',
+  tagline: 'Glides in from the shadows of the molars to scrub.',
   movement: 'glide',
-  attackEveryBeats: 1,
+  travelSpeed: 6.5,
   suits: [
     {
       id: 'classic',
@@ -16,7 +15,7 @@ export const batman: HeroPack = {
         secondary: '#15171c',
         accent: '#f2c14e',
         glow: '#ffffff',
-        attack: '#c9ced9',
+        brush: '#f2c14e',
         skin: '#f1c9a5',
       },
     },
@@ -28,7 +27,7 @@ export const batman: HeroPack = {
         secondary: '#1f3a93',
         accent: '#f2c14e',
         glow: '#ffffff',
-        attack: '#dbe4ff',
+        brush: '#1f3a93',
         skin: '#f1c9a5',
       },
     },

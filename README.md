@@ -44,15 +44,20 @@ Add `?fast=1` to the URL to run the game clock at 10x (a full session takes 12 s
 - **Session**: 2:00 split into six 20-second zones in the order from PLAN.md, mini mouth map,
   big countdown, spoken zone prompts, screen wake lock, pause (automatic when the tab is hidden),
   early quit with fewer stars.
-- **Mouth City arena**: cartoon mouth with 24 teeth whose shader goes from grimy yellow to
-  sparkling white as each zone is brushed, gums, tongue, lips, camera rig that moves per zone,
-  toon shading, bloom, particle bursts and foam bubbles.
-- **Heroes**: Iron Man (repulsor beams, hovers), Spider-Man (web shots that cocoon monsters,
-  swings), Batman (arcing batarangs, glides with cape). Attacks fire on the beat and auto-target
-  monsters on the current zone's teeth.
-- **Boss**: the Cavity King for the last 20 seconds; health drains with the clock.
-- **Audio**: procedural 2-minute synth track at 120 bpm with a boss build-up, procedural SFX,
-  speech-synthesis voice lines per hero.
+- **Mouth City arena**: cute pastel cartoon mouth with 24 rounded teeth whose shader goes from
+  lightly yellow-tinted with a few soft plaque spots to bright, glossy, sparkling white as each
+  zone is brushed; soft pink gums, friendly tongue, lips, gradient backdrop, camera rig that
+  moves per zone, toon shading, bloom, particle bursts and foam bubbles.
+- **Heroes**: every hero carries a big cartoon toothbrush (handle in hero colours, mint bristles,
+  striped toothpaste), travels to the monster on the current zone's teeth and scrubs it on the
+  beat with a fast back-and-forth motion until it is foamed, squeezed and pops into sparkles.
+  Iron Man jets over with thruster flames, Spider-Man swings in on a web line, Batman glides in
+  with his cape.
+- **Boss**: the Cavity King for the last 20 seconds; the hero scrubs it and it shrinks under
+  foam until it bursts at 0:00.
+- **Audio**: procedural 2-minute synth track at 120 bpm with a boss build-up, procedural SFX
+  (brushing "shh-shh" strokes, squeaky-clean, pops, boss roar, fanfare), speech-synthesis voice
+  lines per hero.
 - **Progression**: 0-3 stars per session (30 s = 1, full session = 2, morning + evening = 3),
   day streak, session history in IndexedDB (Dexie), suit unlocks. Only the best session per
   day and slot (morning/evening, taken from the session's start time) counts towards totals and
@@ -71,7 +76,7 @@ Add `?fast=1` to the URL to run the game clock at 10x (a full session takes 12 s
 src/
   app/        App shell, screens (Hub, HeroSelect, Play, Parent), HUD components, styles
   game/       pure game logic: clock, zones, scoring, mouth layout, simulation, zustand store
-  scene/      React Three Fiber scene: Arena, heroes, monsters, boss, projectiles, particles
+  scene/      React Three Fiber scene: Arena, heroes (with toothbrush), monsters, boss, particles
   heroes/     data-driven hero packs (<id>/hero.ts)
   audio/      Web Audio engine, procedural music sequencer, SFX, speech voice
   storage/    Dexie database (sessions + settings)

@@ -1,5 +1,4 @@
 /** Procedural sound effects. Each call builds a tiny oscillator graph and lets it die. */
-import type { AttackKind } from '../heroes/types';
 import { getContext, getNoiseBuffer, getSfxBus, mtof } from './engine';
 
 function graph(): { ctx: AudioContext; out: GainNode; t: number } | null {
@@ -54,24 +53,44 @@ function noise(ctx: AudioContext, out: AudioNode, t: number, filter: BiquadFilte
   src.stop(t + dur + 0.05);
 }
 
+let lastScrubAt = 0;
+
 export const sfx = {
-  attack(kind: AttackKind): void {
+  /** One brushing stroke: a short "shh" of filtered noise (rate-limited). */
+  scrub(): void {
     const g = graph();
     if (!g) return;
     const { ctx, out, t } = g;
-    if (kind === 'beam') {
-      tone(ctx, out, t, 'sawtooth', 900, 220, 0.22, 0.18);
-      tone(ctx, out, t, 'sine', 1800, 500, 0.18, 0.12);
-      noise(ctx, out, t, 'bandpass', 3000, 800, 0.2, 0.1, 2);
-    } else if (kind === 'web') {
-      noise(ctx, out, t, 'bandpass', 600, 4500, 0.16, 0.2, 1.5);
-      tone(ctx, out, t + 0.02, 'triangle', 300, 1400, 0.12, 0.08);
-    } else {
-      // metallic batarang whoosh
-      tone(ctx, out, t, 'square', 1800, 2200, 0.08, 0.06);
-      tone(ctx, out, t, 'sine', 2600, 2500, 0.25, 0.08);
-      noise(ctx, out, t, 'highpass', 2000, 6000, 0.3, 0.08);
-    }
+    if (t - lastScrubAt < 0.09) return;
+    lastScrubAt = t;
+    noise(ctx, out, t, 'bandpass', 2600, 1400, 0.11, 0.14, 0.8);
+    noise(ctx, out, t + 0.005, 'highpass', 5000, 3500, 0.08, 0.05);
+  },
+
+  /** Squeaky-clean: a glide up with vibrato when a monster is fully foamed. */
+  squeak(): void {
+    const g = graph();
+    if (!g) return;
+    const { ctx, out, t } = g;
+    const o = ctx.createOscillator();
+    o.type = 'sine';
+    o.frequency.setValueAtTime(1400, t);
+    o.frequency.exponentialRampToValueAtTime(2600, t + 0.14);
+    o.frequency.exponentialRampToValueAtTime(2100, t + 0.22);
+    const lfo = ctx.createOscillator();
+    lfo.frequency.value = 28;
+    const lfoG = ctx.createGain();
+    lfoG.gain.value = 120;
+    lfo.connect(lfoG).connect(o.frequency);
+    const gn = ctx.createGain();
+    gn.gain.setValueAtTime(0.0001, t);
+    gn.gain.linearRampToValueAtTime(0.16, t + 0.02);
+    gn.gain.exponentialRampToValueAtTime(0.0001, t + 0.26);
+    o.connect(gn).connect(out);
+    o.start(t);
+    lfo.start(t);
+    o.stop(t + 0.28);
+    lfo.stop(t + 0.28);
   },
 
   pop(): void {
@@ -80,14 +99,6 @@ export const sfx = {
     const { ctx, out, t } = g;
     tone(ctx, out, t, 'sine', 300, 900, 0.12, 0.25);
     noise(ctx, out, t, 'bandpass', 1200, 400, 0.12, 0.15, 1);
-  },
-
-  cocoon(): void {
-    const g = graph();
-    if (!g) return;
-    const { ctx, out, t } = g;
-    noise(ctx, out, t, 'lowpass', 3000, 300, 0.25, 0.14);
-    tone(ctx, out, t, 'triangle', 500, 250, 0.2, 0.1);
   },
 
   bossHit(): void {

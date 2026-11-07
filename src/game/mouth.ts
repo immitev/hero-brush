@@ -123,6 +123,53 @@ export function perchOn(t: ToothDef, surface: PerchSurface, radius = 0.3): Perch
   return { pos: [t.pos[0], t.pos[1] + dir * off, t.pos[2]], normal: [0, dir, 0] };
 }
 
+function norm(v: Vec3): Vec3 {
+  const l = Math.hypot(v[0], v[1], v[2]) || 1;
+  return [v[0] / l, v[1] / l, v[2] / l];
+}
+
+function cross(a: Vec3, b: Vec3): Vec3 {
+  return [a[1] * b[2] - a[2] * b[1], a[2] * b[0] - a[0] * b[2], a[0] * b[1] - a[1] * b[0]];
+}
+
+/** Unit vector pointing "sideways" along the tooth surface, for a perch normal. */
+export function perchSide(normal: Vec3): Vec3 {
+  const ref: Vec3 = Math.abs(normal[1]) > 0.9 ? [0, 0, 1] : [0, 1, 0];
+  return norm(cross(normal, ref));
+}
+
+/**
+ * Where the hero hovers to scrub a monster on a perch: a little in front of the
+ * surface and to the side, so the monster stays visible while being brushed.
+ */
+export function scrubStandoff(perch: Perch, sideSign = 1): Vec3 {
+  const s = perchSide(perch.normal);
+  const n = perch.normal;
+  const front = 0.45;
+  const side = 0.8 * sideSign;
+  const drop = Math.abs(n[1]) > 0.9 ? 0 : -0.5; // feet below the tooth for wall surfaces
+  return [perch.pos[0] + n[0] * front + s[0] * side, perch.pos[1] + n[1] * front + s[1] * side + drop, perch.pos[2] + n[2] * front + s[2] * side];
+}
+
+/**
+ * Resting spot of the hero for a zone when there is nothing to scrub: hovering
+ * in the gap between the rows, just in front of the zone, so the current row
+ * stays visible above (or below) it.
+ */
+export function zoneHome(zoneIndex: number): Vec3 {
+  const z = ZONES[zoneIndex];
+  const c = zoneCenter(zoneIndex);
+  const up = z.row === 'upper';
+  if (z.surface === 'outside') {
+    const sideSign = z.side === 'left' ? -1 : 1;
+    const a = (sideSign * 42 * Math.PI) / 180;
+    const ox = Math.sin(a);
+    const oz = Math.cos(a);
+    return [c[0] + ox * 0.9, up ? c[1] - 1.5 : c[1] + 0.6, c[2] + oz * 0.9];
+  }
+  return up ? [1.4, -0.9, 2.4] : [1.4, 0.2, 2.4];
+}
+
 export function zoneCenter(zoneIndex: number): Vec3 {
   const teeth = teethForZone(zoneIndex);
   const c: Vec3 = [0, 0, 0];
@@ -152,7 +199,7 @@ export function cameraPoseForZone(zoneIndex: number): CameraPose {
     const cx = ARCH_RX * ox * 0.9;
     const cz = ARCH_RZ * oz * 0.9;
     const ty = up ? 0.5 : -0.5;
-    const dist = 4.6;
+    const dist = 5.2;
     return {
       pos: [cx + ox * dist, ty + (up ? 0.7 : -0.7), cz + oz * dist],
       target: [cx * 0.85, ty, cz * 0.85],
@@ -167,6 +214,22 @@ export function cameraPoseForZone(zoneIndex: number): CameraPose {
 
 /** The Cavity King floats in the mouth opening, in front of the teeth. */
 export const BOSS_POSITION: Vec3 = [0.45, 0.1, 3.2];
+
+/** Boss radius for a given health 0..1 (it shrinks under the foam). */
+export function bossRadius(health: number): number {
+  return 0.45 + 0.65 * Math.max(0, Math.min(1, health));
+}
+
+/** Where the boss floats at game time `t` (gentle bob). */
+export function bossPositionAt(t: number): Vec3 {
+  return [BOSS_POSITION[0] + Math.sin(t * 1.3) * 0.15, BOSS_POSITION[1] + Math.sin(t * 2.1) * 0.12, BOSS_POSITION[2]];
+}
+
+/** Where the hero hovers to scrub the boss (to its left, slightly in front). */
+export function bossStandoff(bossPos: Vec3, health: number): Vec3 {
+  const r = bossRadius(health);
+  return [bossPos[0] - (r + 0.75), bossPos[1] - 0.45, bossPos[2] + 0.35];
+}
 
 export const BOSS_CAMERA: CameraPose = { pos: [0, 0.4, 8.2], target: [0, 0.1, 1.5] };
 export const INTRO_CAMERA: CameraPose = { pos: [0, 0.4, 9], target: [0, 0.2, 0] };

@@ -11,7 +11,8 @@ import { Effects } from './Effects';
 import { HeroRig } from './HeroRig';
 import { Monsters } from './Monsters';
 import { Particles } from './Particles';
-import { Projectiles } from './Projectiles';
+
+export const ARENA_BG = '#e9b5cd';
 
 export function GameScene({ hero, suit }: { hero: HeroPack; suit: Suit }) {
   const quality = useStore((s) => (s.forcedLowQuality ? 'low' : s.settings.quality));
@@ -30,8 +31,8 @@ export function GameScene({ hero, suit }: { hero: HeroPack; suit: Suit }) {
       }}
       style={{ position: 'absolute', inset: 0 }}
     >
-      <color attach="background" args={['#3a1230']} />
-      <fog attach="fog" args={['#3a1230', 10, 26]} />
+      <color attach="background" args={[ARENA_BG]} />
+      <fog attach="fog" args={['#d9a3bf', 12, 30]} />
       <PerformanceMonitor
         bounds={() => [40, 58]}
         flipflops={3}
@@ -44,9 +45,8 @@ export function GameScene({ hero, suit }: { hero: HeroPack; suit: Suit }) {
         <HeroRig hero={hero} suit={suit} />
         <Monsters />
         <Boss />
-        <Projectiles hero={hero} suit={suit} />
         <Particles quality={quality} />
-        {quality === 'high' && <Sparkles count={60} scale={[9, 5, 8]} size={3} speed={0.3} opacity={0.5} color="#ffd6f0" />}
+        {quality === 'high' && <Sparkles count={50} scale={[9, 5, 8]} size={3} speed={0.3} opacity={0.45} color="#ffffff" />}
       </Suspense>
       <CameraRig />
       {quality === 'high' && <Effects />}

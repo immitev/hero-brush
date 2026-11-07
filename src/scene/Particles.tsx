@@ -1,6 +1,6 @@
 /**
- * Instanced particle bursts (monster pops, boss hits, sparkles) and foam
- * bubbles. Consumes `runtime.events` each frame.
+ * Instanced particle bursts (pops, boss hits, sparkles) and foam bubbles.
+ * Consumes `runtime.events` each frame.
  */
 import { useFrame } from '@react-three/fiber';
 import { useMemo, useRef } from 'react';
@@ -35,7 +35,7 @@ function makePool(n: number): P[] {
 
 export function Particles({ quality }: { quality: 'low' | 'high' }) {
   const burstCount = quality === 'high' ? 360 : 140;
-  const foamCount = quality === 'high' ? 70 : 24;
+  const foamCount = quality === 'high' ? 90 : 30;
   const burstRef = useRef<THREE.InstancedMesh>(null);
   const foamRef = useRef<THREE.InstancedMesh>(null);
   const bursts = useMemo(() => makePool(burstCount), [burstCount]);
@@ -46,14 +46,13 @@ export function Particles({ quality }: { quality: 'low' | 'high' }) {
       new THREE.MeshToonMaterial({
         color: '#ffffff',
         transparent: true,
-        opacity: 0.55,
+        opacity: 0.7,
         depthWrite: false,
       }),
     [],
   );
   const burstGeo = useMemo(() => new THREE.IcosahedronGeometry(1, 0), []);
   const foamGeo = useMemo(() => new THREE.SphereGeometry(1, 10, 8), []);
-  const foamTimer = useRef(0);
   const sparkleTimer = useRef(0);
 
   const emit = (pool: P[], x: number, y: number, z: number, hex: string, count: number, speed: number, size: number, life: number, gravity: number) => {
@@ -87,23 +86,36 @@ export function Particles({ quality }: { quality: 'low' | 'high' }) {
     const rt = runtime;
     if (rt.paused) return; // freeze everything (no spawning, no integration) while paused
     const dt = Math.min(dtRaw, 0.05);
+    const hi = quality === 'high';
     // consume events
     for (const e of rt.events) {
       if (e.type === 'pop') {
-        emit(bursts, e.pos[0], e.pos[1] + 0.25, e.pos[2], e.color, e.count ?? 18, 3.2, 0.09, 0.7, 5);
-        emit(bursts, e.pos[0], e.pos[1] + 0.25, e.pos[2], '#ffffff', 6, 2, 0.05, 0.4, 0);
+        emit(bursts, e.pos[0], e.pos[1] + 0.25, e.pos[2], e.color, e.count ?? 16, 3.0, 0.08, 0.7, 4);
+        emit(bursts, e.pos[0], e.pos[1] + 0.25, e.pos[2], '#9af5ff', 6, 2, 0.05, 0.5, 0);
         sfx.pop();
-      } else if (e.type === 'hit') {
-        emit(bursts, e.pos[0], e.pos[1] + 0.25, e.pos[2], e.color, 8, 1.5, 0.06, 0.4, 0);
-        sfx.cocoon();
+      } else if (e.type === 'scrub') {
+        // foam puffs around the monster + tiny sparkles
+        const px = e.pos[0] + e.normal[0] * 0.2;
+        const py = e.pos[1] + e.normal[1] * 0.2 + 0.2;
+        const pz = e.pos[2] + e.normal[2] * 0.2;
+        emit(foam, px, py, pz, '#ffffff', hi ? 3 : 1, 0.6, 0.05, 1.0, -0.25);
+        emit(bursts, px, py, pz, '#ffffff', 2, 0.8, 0.03, 0.4, 0);
+        sfx.scrub();
+      } else if (e.type === 'foamed') {
+        emit(foam, e.pos[0], e.pos[1] + 0.25, e.pos[2], '#ffffff', hi ? 6 : 3, 1.0, 0.06, 1.0, -0.2);
+        sfx.squeak();
+      } else if (e.type === 'bossFoam') {
+        emit(foam, e.pos[0], e.pos[1] + (Math.random() - 0.5) * 1.2, e.pos[2], '#ffffff', hi ? 4 : 2, 0.9, 0.09, 1.3, -0.2);
+        sfx.scrub();
       } else if (e.type === 'bossHit') {
-        emit(bursts, e.pos[0], e.pos[1], e.pos[2] + 0.9, '#c084fc', 22, 3.5, 0.1, 0.6, 4);
-        emit(bursts, e.pos[0], e.pos[1], e.pos[2] + 0.9, '#ffffff', 8, 2.5, 0.06, 0.4, 0);
+        emit(bursts, e.pos[0], e.pos[1], e.pos[2] + 0.3, '#d8b4fe', 18, 3.0, 0.09, 0.6, 3);
+        emit(bursts, e.pos[0], e.pos[1], e.pos[2] + 0.3, '#ffffff', 8, 2.5, 0.06, 0.4, 0);
         sfx.bossHit();
       } else if (e.type === 'bossDefeated') {
         emit(bursts, e.pos[0], e.pos[1], e.pos[2], '#c084fc', 90, 5, 0.16, 1.4, 3);
         emit(bursts, e.pos[0], e.pos[1], e.pos[2], '#ffd166', 60, 6, 0.1, 1.6, 2);
         emit(bursts, e.pos[0], e.pos[1], e.pos[2], '#ffffff', 40, 4, 0.08, 1.2, 0);
+        emit(foam, e.pos[0], e.pos[1], e.pos[2], '#ffffff', 30, 3, 0.16, 1.5, 0.5);
         sfx.bossDefeated();
       } else if (e.type === 'zoneClean') {
         for (const t of teethForZone(e.zoneIndex)) {
@@ -114,7 +126,7 @@ export function Particles({ quality }: { quality: 'low' | 'high' }) {
         }
         sfx.sparkle();
       } else if (e.type === 'sparkle') {
-        emit(bursts, e.pos[0], e.pos[1], e.pos[2], '#ffffff', 5, 1, 0.05, 0.6, -0.4);
+        emit(bursts, e.pos[0], e.pos[1] + 0.2, e.pos[2], '#ffffff', 5, 1, 0.05, 0.6, -0.4);
       }
     }
     rt.events.length = 0;
@@ -123,7 +135,7 @@ export function Particles({ quality }: { quality: 'low' | 'high' }) {
     if (rt.phase === 'playing' || rt.phase === 'victory') {
       sparkleTimer.current -= dt;
       if (sparkleTimer.current <= 0) {
-        sparkleTimer.current = quality === 'high' ? 0.18 : 0.35;
+        sparkleTimer.current = hi ? 0.18 : 0.35;
         const zi = rt.phase === 'victory' ? Math.floor(Math.random() * 6) : rt.zoneIndex;
         const clean = rt.phase === 'victory' ? 1 : rt.zoneClean[zi];
         if (clean > 0.5) {
@@ -132,15 +144,6 @@ export function Particles({ quality }: { quality: 'low' | 'high' }) {
           const perch = perchOn(t, zi >= 4 ? 'chewing' : 'outside', 0.05);
           emit(bursts, perch.pos[0] + (Math.random() - 0.5) * 0.4, perch.pos[1] + (Math.random() - 0.5) * 0.4, perch.pos[2], '#ffffff', 2, 0.4, 0.04 + clean * 0.03, 0.5, -0.6);
         }
-      }
-      // foam bubbles around the teeth being brushed
-      foamTimer.current -= dt;
-      if (rt.phase === 'playing' && foamTimer.current <= 0) {
-        foamTimer.current = quality === 'high' ? 0.08 : 0.2;
-        const teeth = teethForZone(rt.zoneIndex);
-        const t = teeth[Math.floor(Math.random() * teeth.length)];
-        const perch = perchOn(t, rt.zoneIndex >= 4 ? 'chewing' : 'outside', 0.15);
-        emit(foam, perch.pos[0] + (Math.random() - 0.5) * 0.5, perch.pos[1] + (Math.random() - 0.5) * 0.5, perch.pos[2] + (Math.random() - 0.5) * 0.3, '#ffffff', 1, 0.25, 0.07, 1.8, -0.35);
       }
     }
 

@@ -1,25 +1,32 @@
-/** The Cavity King: big purple blob with a crown. Appears for the last 20 s. */
+/** The Cavity King: big purple blob with a crown. Scrubbed into foam for the last 20 s. */
 import { useFrame } from '@react-three/fiber';
 import { useMemo, useRef } from 'react';
 import * as THREE from 'three';
-import { BOSS_POSITION } from '../game/mouth';
+import { bossRadius } from '../game/mouth';
 import { runtime } from '../game/runtime';
 import { glow, toon } from './materials';
 
+const FOAM_DIRS: [number, number, number][] = [
+  [-0.9, 0.2, 0.4], [-0.7, -0.4, 0.6], [-0.5, 0.7, 0.5], [-0.95, -0.1, -0.2], [-0.3, 0.9, 0.3], [-0.6, -0.75, 0.2],
+  [0.1, 0.6, 0.8], [0.3, -0.3, 0.9], [0.8, 0.5, 0.3], [0.6, -0.6, 0.5], [-0.2, -0.95, 0.2], [0.9, -0.1, -0.4],
+];
+
 export function Boss() {
   const group = useRef<THREE.Group>(null);
-  const bodyMat = useMemo(() => toon('#5b2a86'), []);
+  const foam = useRef<THREE.Group>(null);
+  const bodyMat = useMemo(() => toon('#7c4dab'), []);
   const m = useMemo(
     () => ({
-      dark: toon('#3b1a5c'),
+      dark: toon('#5a3184'),
       crown: toon('#f2c14e'),
-      eye: glow('#ff5a5a', 1.8),
+      eye: glow('#ff7b7b', 1.6),
       teeth: toon('#f6f6f6'),
-      mouth: toon('#1b0a2b'),
+      mouth: toon('#2b1444'),
+      foam: toon('#ffffff'),
     }),
     [],
   );
-  const baseColor = useMemo(() => new THREE.Color('#5b2a86'), []);
+  const baseColor = useMemo(() => new THREE.Color('#7c4dab'), []);
   const white = useMemo(() => new THREE.Color('#ffffff'), []);
   const shown = useRef(0);
 
@@ -39,15 +46,22 @@ export function Boss() {
     const health = rt.bossHealth;
     const sinceHit = rt.elapsed - rt.bossHitAt;
     const hitK = sinceHit < 0.2 ? 1 - sinceHit / 0.2 : 0;
-    const base = 0.5 + 0.6 * health; // shrinks as it loses
     const wob = 1 + Math.sin(t * 3) * 0.04;
     const shrinkBoom = rt.bossActive ? 1 : Math.max(0, 1 - (1 - s) * 1.4);
-    g.scale.setScalar(base * s * wob * shrinkBoom * (1 + hitK * 0.15));
-    g.position.set(BOSS_POSITION[0] + Math.sin(t * 1.3) * 0.2, BOSS_POSITION[1] + Math.sin(t * 2.1) * 0.15 + (1 - s) * 2.5, BOSS_POSITION[2]);
+    g.scale.setScalar(bossRadius(health) * s * wob * shrinkBoom * (1 + hitK * 0.12));
+    g.position.set(rt.bossPos[0], rt.bossPos[1] + (1 - s) * 2.5, rt.bossPos[2]);
     g.rotation.y = Math.sin(t * 0.7) * 0.25 + (hitK ? Math.sin(t * 90) * 0.1 : 0);
     g.rotation.z = hitK * Math.sin(t * 60) * 0.08;
-    bodyMat.color.copy(baseColor).lerp(white, hitK);
-    bodyMat.emissive.setScalar(hitK * 0.6);
+    bodyMat.color.copy(baseColor).lerp(white, hitK * 0.8);
+    bodyMat.emissive.setScalar(hitK * 0.5);
+    if (foam.current) {
+      const f = rt.bossActive ? rt.bossFoam : 0;
+      foam.current.visible = f > 0.02;
+      foam.current.children.forEach((c, i) => {
+        const k = Math.min(1, Math.max(0, f * 1.6 - i * 0.07));
+        c.scale.setScalar(0.05 + k * 0.42 + Math.sin(t * 2 + i) * 0.02);
+      });
+    }
   });
 
   return (
@@ -55,7 +69,6 @@ export function Boss() {
       <mesh material={bodyMat}>
         <sphereGeometry args={[1, 28, 22]} />
       </mesh>
-      {/* lumps */}
       {[
         [0.7, 0.4, 0.4],
         [-0.65, 0.5, 0.45],
@@ -66,7 +79,6 @@ export function Boss() {
           <sphereGeometry args={[0.35, 14, 10]} />
         </mesh>
       ))}
-      {/* crown */}
       <group position={[0, 0.95, 0]}>
         <mesh material={m.crown}>
           <cylinderGeometry args={[0.42, 0.5, 0.3, 12]} />
@@ -80,7 +92,6 @@ export function Boss() {
           );
         })}
       </group>
-      {/* eyes */}
       {[-1, 1].map((sgn) => (
         <group key={sgn} position={[sgn * 0.35, 0.25, 0.85]}>
           <mesh material={m.eye}>
@@ -94,7 +105,6 @@ export function Boss() {
           </mesh>
         </group>
       ))}
-      {/* mouth with teeth */}
       <group position={[0, -0.3, 0.86]} rotation={[0.4, 0, 0]}>
         <mesh material={m.mouth}>
           <boxGeometry args={[0.8, 0.3, 0.2]} />
@@ -102,6 +112,14 @@ export function Boss() {
         {[-0.28, -0.1, 0.1, 0.28].map((x, i) => (
           <mesh key={i} position={[x, 0.08, 0.08]} rotation={[Math.PI, 0, 0]} material={m.teeth}>
             <coneGeometry args={[0.07, 0.16, 5]} />
+          </mesh>
+        ))}
+      </group>
+      {/* foam that buries the boss as it is scrubbed */}
+      <group ref={foam} visible={false}>
+        {FOAM_DIRS.map((d, i) => (
+          <mesh key={i} position={[d[0] * 0.95, d[1] * 0.95, d[2] * 0.95]} material={m.foam} scale={0.001}>
+            <sphereGeometry args={[1, 12, 10]} />
           </mesh>
         ))}
       </group>

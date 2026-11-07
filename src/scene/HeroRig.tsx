@@ -1,20 +1,22 @@
 /**
- * Places the hero in front of the camera during a session, turns it towards its
- * aim point and feeds the animation state from the runtime.
+ * Renders the hero where the simulation says it is (travelling between teeth,
+ * scrubbing a monster or the boss) and feeds the animation state. During the
+ * countdown and the victory screen it stands in front of the camera instead.
  */
 import { useFrame } from '@react-three/fiber';
-import { useMemo, useRef } from 'react';
+import { useRef } from 'react';
 import * as THREE from 'three';
 import { runtime } from '../game/runtime';
 import type { HeroPack, Suit } from '../heroes';
 import { HeroModel, createHeroAnim, type HeroAnim } from './heroes/HeroModel';
 
+/** Heroes are built ~1.8 tall; scaled down in the arena so they do not cover the teeth. */
+export const ARENA_HERO_SCALE = 0.6;
+
 const fwd = new THREE.Vector3();
 const right = new THREE.Vector3();
 const up = new THREE.Vector3();
 const desired = new THREE.Vector3();
-const aimV = new THREE.Vector3();
-const lookTarget = new THREE.Vector3();
 const camDir = new THREE.Vector3();
 
 export function HeroRig({ hero, suit }: { hero: HeroPack; suit: Suit }) {
@@ -23,7 +25,6 @@ export function HeroRig({ hero, suit }: { hero: HeroPack; suit: Suit }) {
   const modeStart = useRef(0);
   const lastMode = useRef<HeroAnim['mode']>('fight');
   const yaw = useRef(0);
-  const aimPoint = useMemo(() => new THREE.Vector3(), []);
 
   useFrame((state, dt) => {
     const g = group.current;
@@ -39,52 +40,33 @@ export function HeroRig({ hero, suit }: { hero: HeroPack; suit: Suit }) {
     }
     a.mode = mode;
     a.modeT = state.clock.elapsedTime - modeStart.current;
-    a.attackAge = rt.phase === 'playing' ? rt.elapsed - rt.heroAttackAt : Infinity;
+    a.state = rt.hero.state;
+    a.speed = rt.paused ? 0 : rt.hero.speed;
 
-    // position relative to the camera: lower-left of the frame, a bit in front
-    cam.getWorldDirection(fwd);
-    right.crossVectors(fwd, cam.up).normalize();
-    up.crossVectors(right, fwd).normalize();
-    const aspect = state.size.width / Math.max(1, state.size.height);
-    const playing = rt.phase === 'playing';
-    const boss = playing && rt.bossActive;
-    const dist = playing ? 4.0 : 4.0;
-    const side = playing ? (aspect < 1 ? (boss ? -1.2 : -0.95) : boss ? -2.4 : -1.8) : 0;
-    const down = playing ? (aspect < 1 ? -1.45 : -1.3) : -1.1;
-    desired.copy(cam.position).addScaledVector(fwd, dist).addScaledVector(right, side).addScaledVector(up, down);
-    const k = 1 - Math.exp(-dt * 4);
-    g.position.lerp(desired, k);
-
-    // facing: aim at the target, blended slightly towards the camera so the face stays visible
-    if (rt.phase === 'playing' && rt.heroAim) {
-      aimV.set(rt.heroAim[0], rt.heroAim[1], rt.heroAim[2]);
-      aimPoint.lerp(aimV, 1 - Math.exp(-dt * 6));
-      lookTarget.copy(aimPoint).sub(g.position);
-      lookTarget.y = 0;
-      const targetYaw = Math.atan2(lookTarget.x, lookTarget.z);
-      camDir.copy(cam.position).sub(g.position);
-      const camYaw = Math.atan2(camDir.x, camDir.z);
-      const blended = lerpAngle(targetYaw, camYaw, 0.3);
-      yaw.current = lerpAngle(yaw.current, blended, 1 - Math.exp(-dt * 5));
+    if (rt.phase === 'playing') {
+      const h = rt.hero;
+      desired.set(h.pos[0], h.pos[1], h.pos[2]);
+      g.position.lerp(desired, 1 - Math.exp(-dt * 12));
+      const targetYaw = Math.atan2(h.facing[0], h.facing[2]);
+      yaw.current = lerpAngle(yaw.current, targetYaw, 1 - Math.exp(-dt * 8));
+      g.scale.setScalar(ARENA_HERO_SCALE);
     } else {
+      // intro / victory: centre stage, facing the camera
+      cam.getWorldDirection(fwd);
+      right.crossVectors(fwd, cam.up).normalize();
+      up.crossVectors(right, fwd).normalize();
+      desired.copy(cam.position).addScaledVector(fwd, 4.2).addScaledVector(up, -1.2);
+      g.position.lerp(desired, 1 - Math.exp(-dt * 4));
       camDir.copy(cam.position).sub(g.position);
       yaw.current = lerpAngle(yaw.current, Math.atan2(camDir.x, camDir.z), 1 - Math.exp(-dt * 4));
+      g.scale.setScalar(0.9);
     }
     g.rotation.y = yaw.current;
-
-    rt.heroPos = [g.position.x, g.position.y, g.position.z];
   });
 
   return (
-    <group ref={group}>
-      <HeroModel
-        hero={hero}
-        suit={suit}
-        anim={anim}
-        onHand={(p) => {
-          runtime.heroHand = [p.x, p.y, p.z];
-        }}
-      />
+    <group ref={group} scale={ARENA_HERO_SCALE}>
+      <HeroModel hero={hero} suit={suit} anim={anim} />
     </group>
   );
 }

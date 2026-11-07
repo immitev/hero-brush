@@ -13,4 +13,4 @@ export function getSuit(hero: HeroPack, suitId: string | undefined): Suit {
   return hero.suits.find((s) => s.id === suitId) ?? hero.suits[0];
 }
 
-export type { HeroPack, Suit, HeroPalette, AttackKind, MovementKind } from './types';
+export type { HeroPack, Suit, HeroPalette, MovementKind } from './types';
