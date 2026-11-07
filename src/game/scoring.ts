@@ -1,4 +1,4 @@
-import { SESSION_SECONDS } from './zones';
+import { SESSION_SECONDS } from './segments';
 
 export type Slot = 'morning' | 'evening';
 

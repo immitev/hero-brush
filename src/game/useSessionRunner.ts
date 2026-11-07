@@ -14,10 +14,10 @@ import { GameClock } from './clock';
 import { countdownAt } from './countdown';
 import { resetRuntime, runtime, type Phase } from './runtime';
 import { MIN_RECORD_SECONDS } from './scoring';
+import { SEGMENTS, SESSION_SECONDS, isSessionComplete, timeLeft } from './segments';
 import { stepSimulation } from './simulation';
-import { voiceCueAt } from './voiceCues';
 import { type SessionResult, useStore } from './store';
-import { BOSS_START, SESSION_SECONDS, ZONES, isSessionComplete, timeLeft } from './zones';
+import { voiceCueAt } from './voiceCues';
 
 export interface SessionOutcome {
   completed: boolean;
@@ -108,10 +108,11 @@ export function useSessionRunner(hero: HeroPack): SessionApi {
       setPhase('victory');
       setPaused(false);
       if (completed) {
+        rt.events.push({ type: 'allClean' });
         later(350, () => sfx.victory());
         later(900, () => {
           say(hero.id, 'victory', 'normal');
-          say('narrator', 'rinse', 'normal');
+          say('narrator', 'spit', 'normal');
         });
       } else {
         say('narrator', 'goodTry', 'high');
@@ -183,7 +184,7 @@ export function useSessionRunner(hero: HeroPack): SessionApi {
     setPaused(false);
     setOutcome(null);
     setResult(null);
-    setHud({ phase: 'countdown', timeLeft: 120, zoneIndex: 0, bossActive: false, bossHealth: 1, countdown: 3, paused: false, kills: 0 });
+    setHud({ phase: 'countdown', timeLeft: SESSION_SECONDS, segmentIndex: 0, clean: 0, countdown: 3, paused: false });
     void acquireWakeLock();
     // decode the narrator's and this hero's lines while the countdown runs
     void preloadVoices(['narrator', hero.id]);
@@ -213,23 +214,16 @@ export function useSessionRunner(hero: HeroPack): SessionApi {
           s.startedAt = Date.now();
           s.clock.start();
           music.start();
-          say('narrator', ZONES[0].voice, 'normal');
+          say('narrator', SEGMENTS[0].voice, 'normal');
           setPhase('playing');
         }
       } else if (rt.phase === 'playing') {
         rt.elapsed = s.clock.elapsed;
-        const prevZone = rt.zoneIndex;
-        const prevBoss = rt.bossActive;
+        const prevSegment = rt.segmentIndex;
         stepSimulation(rt, { hero });
-        if (rt.zoneIndex !== prevZone) {
-          sfx.zoneChime();
-          say('narrator', ZONES[rt.zoneIndex].voice, 'normal');
+        if (rt.segmentIndex !== prevSegment) {
+          say('narrator', SEGMENTS[rt.segmentIndex].voice, 'normal');
           if (speed === 1) music.syncTo(rt.elapsed);
-        }
-        if (!prevBoss && rt.bossActive) {
-          sfx.bossRoar();
-          if (speed === 1) music.syncTo(Math.max(rt.elapsed, BOSS_START));
-          later(600, () => say(hero.id, 'boss', 'normal'));
         }
         // scripted quips and praise: low priority, skipped if a prompt is playing
         for (let cue = voiceCueAt(s.nextCue); cue && rt.elapsed >= cue.at; cue = voiceCueAt(++s.nextCue)) {
@@ -247,11 +241,9 @@ export function useSessionRunner(hero: HeroPack): SessionApi {
         setHud({
           phase: rt.phase,
           timeLeft: timeLeft(rt.elapsed),
-          zoneIndex: rt.zoneIndex,
-          bossActive: rt.bossActive,
-          bossHealth: rt.bossHealth,
+          segmentIndex: rt.segmentIndex,
+          clean: rt.clean,
           countdown: countdownAt(rt.countdownT).step,
-          kills: rt.kills,
         });
       }
     };

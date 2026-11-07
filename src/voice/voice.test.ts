@@ -1,7 +1,7 @@
 import { describe, expect, it } from 'vitest';
 import { decide } from '../audio/voice';
+import { SEGMENTS } from '../game/segments';
 import { VOICE_CUES } from '../game/voiceCues';
-import { ZONES } from '../game/zones';
 import { HEROES } from '../heroes';
 import { LANGS } from '../i18n/lang';
 import { HERO_LINES, LINES, SPEAKERS, VOICES, lineText } from './lines';
@@ -29,15 +29,31 @@ describe('voice lines', () => {
     expect(SPEAKERS.filter((s) => s !== 'narrator').sort()).toEqual(HEROES.map((h) => h.id).sort());
   });
 
-  it('zone prompts and scripted cues refer to existing lines', () => {
-    for (const z of ZONES) expect(LINES.narrator[z.voice], z.voice).toBeTruthy();
+  it('segment prompts and scripted cues refer to existing lines', () => {
+    for (const s of SEGMENTS) expect(LINES.narrator[s.voice], s.voice).toBeTruthy();
+    expect(new Set(SEGMENTS.map((s) => s.voice)).size).toBe(SEGMENTS.length);
     for (const c of VOICE_CUES) {
       const speaker = c.speaker === 'hero' ? 'ironman' : 'narrator';
       expect(LINES[speaker][c.line], c.line).toBeTruthy();
+      // cues never land on a segment boundary (where the prompt plays)
+      expect(SEGMENTS.some((s) => Math.abs(s.start - c.at) < 3), `cue at ${c.at}`).toBe(false);
     }
     for (const n of [1, 2, 3]) expect(LINES.narrator[`count${n}`]).toBeTruthy();
-    for (const id of ['go', 'goodTry', 'rinse']) expect(LINES.narrator[id]).toBeTruthy();
-    for (const id of ['select', 'boss', 'victory']) expect(HERO_LINES).toContain(id);
+    for (const id of ['go', 'goodTry', 'spit']) expect(LINES.narrator[id]).toBeTruthy();
+    for (const id of ['select', 'victory']) expect(HERO_LINES).toContain(id);
+    expect(HERO_LINES).not.toContain('boss');
+  });
+
+  it('coaching lines teach the technique and never say "rinse" after brushing', () => {
+    const en = Object.values(LINES.narrator).map((l) => l.en ?? '').join(' ').toLowerCase();
+    for (const word of ['45', 'forty-five', 'circles']) void word;
+    expect(en).toMatch(/small.*circles/);
+    expect(en).toMatch(/gum/);
+    expect(en).toMatch(/flat/);
+    expect(en).toMatch(/tongue/);
+    expect(lineText('en', 'narrator', 'spit').toLowerCase()).toMatch(/don't rinse|do not rinse/);
+    expect(lineText('bg', 'narrator', 'spit')).toMatch(/не изплаквай/);
+    expect(en).not.toMatch(/cavity king|monster|gunk/);
   });
 
   it('every speaker has a voice in every language', () => {

@@ -1,64 +1,108 @@
+/**
+ * The giant mouth: anatomically shaped teeth (incisors, canines, premolars,
+ * molars) with enamel + plaque film, scalloped gums with papillae, tongue and
+ * lips. Built procedurally so the app stays offline and small.
+ */
 import { useFrame } from '@react-three/fiber';
 import { useMemo, useRef } from 'react';
 import * as THREE from 'three';
 import { RoundedBoxGeometry } from 'three/examples/jsm/geometries/RoundedBoxGeometry.js';
-import { ARCH_RX, ARCH_RZ, LOWER_GUM_Y, TEETH, type ToothDef, UPPER_GUM_Y, zonesForTooth } from '../game/mouth';
+import { mergeVertices } from 'three/examples/jsm/utils/BufferGeometryUtils.js';
+import { ARCH_RX, ARCH_RZ, LOWER_GUM_Y, TEETH, TONGUE_CENTER, TONGUE_HALF, type ToothDef, UPPER_GUM_Y, gumSign } from '../game/mouth';
+import { writeToothImage } from '../game/plaque';
 import { runtime } from '../game/runtime';
-import { GradientBackdropMaterial, ToothMaterial, toon } from './materials';
+import { EnamelMaterial, GradientBackdropMaterial, createPlaqueTexture } from './materials';
+
+const smoothstep = (a: number, b: number, x: number) => {
+  const t = Math.max(0, Math.min(1, (x - a) / (b - a)));
+  return t * t * (3 - 2 * t);
+};
 
 /**
- * Cute tooth shapes: a well-rounded crown that bellies out in the middle,
- * narrows towards the gum, with soft cusps on molars and a gentle edge on
- * incisors. Local +Y is the chewing surface, local +Z the outside.
+ * Crown shape per tooth kind. Local frame: +X along the row, +Y towards the
+ * chewing edge (−h/2 is the gumline), +Z towards the lips/cheek.
  */
-function toothGeometry(t: ToothDef): THREE.BufferGeometry {
+function toothGeometry(t: ToothDef, highQuality: boolean): THREE.BufferGeometry {
   const [w, h, d] = t.size;
-  const radius = Math.min(w, d) * (t.kind === 'incisor' ? 0.36 : 0.45);
-  const geo = new RoundedBoxGeometry(w, h, d, 6, radius);
+  const radius = Math.min(w, d) * (t.kind === 'incisor' ? 0.3 : 0.4);
+  let geo: THREE.BufferGeometry = new RoundedBoxGeometry(w, h, d, highQuality ? 8 : 5, radius);
+  geo = mergeVertices(geo, 1e-4);
   const pos = geo.attributes.position as THREE.BufferAttribute;
   for (let i = 0; i < pos.count; i++) {
     const x = pos.getX(i);
     const y = pos.getY(i);
     const z = pos.getZ(i);
-    const u = y / h + 0.5; // 0 at the gum, 1 at the chewing edge
-    // belly in the middle, neck towards the gum
-    let k = 0.86 + 0.18 * Math.sin(Math.PI * Math.min(1, u * 1.1));
-    if (t.kind === 'canine' && u > 0.55) k *= 1 - (u - 0.55) * 0.9;
-    if (t.kind === 'incisor' && u > 0.5) k *= 1 - (u - 0.5) * 0.25;
-    let nx = x * k;
-    let nz = z * (t.kind === 'incisor' && u > 0.5 ? k * (1 - (u - 0.5) * 0.5) : k);
+    const u = y / h + 0.5; // 0 gumline .. 1 chewing edge
+    // cervical neck + a bellied crown
+    let s = 0.82 + 0.18 * smoothstep(0, 0.35, u);
+    s *= 1 + 0.08 * Math.sin(Math.PI * Math.min(1, u * 1.15));
+    let nx = x * s;
+    let nz = z * s;
     let ny = y;
-    if ((t.kind === 'molar' || t.kind === 'premolar') && y > h * 0.3) {
-      // soft cusps
-      const bump = Math.cos((x / w) * Math.PI * 2) * Math.cos((z / d) * Math.PI * 2);
-      ny = y - 0.03 + bump * 0.035;
+    const top = smoothstep(0.74, 1.0, u); // the chewing/incisal end
+    if (t.kind === 'incisor') {
+      nx *= 0.76 + 0.3 * u; // shovel: wider at the edge
+      nz *= 1 - 0.5 * u; // and thinner
+      if (z > 0) nz += 0.045 * Math.sin(Math.PI * u); // labial convexity
+      ny -= top * 0.03 * Math.abs(x / (w / 2)); // slightly rounded corners of the edge
+    } else if (t.kind === 'canine') {
+      const k = Math.max(0, u - 0.4) / 0.6;
+      nx *= 1 - 0.5 * k * k;
+      nz *= 1 - 0.3 * k;
+      ny += top * 0.08 * (1 - Math.abs(x / (w / 2))); // a single cusp
+    } else if (t.kind === 'premolar') {
+      const cusps = Math.abs(Math.cos((Math.PI * z) / d)); // buccal + lingual cusps
+      const groove = Math.exp(-((z / 0.11) * (z / 0.11)));
+      ny += top * (0.07 * cusps - 0.05 * groove);
+    } else {
+      const cusps = Math.abs(Math.sin((2 * Math.PI * x) / w)) * Math.abs(Math.sin((2 * Math.PI * z) / d)); // four cusps
+      const grooves = Math.exp(-((x / 0.1) * (x / 0.1))) + Math.exp(-((z / 0.1) * (z / 0.1)));
+      ny += top * (0.075 * cusps - 0.035 * grooves);
     }
     pos.setXYZ(i, nx, ny, nz);
-    void nx;
-    void nz;
   }
   pos.needsUpdate = true;
   geo.computeVertexNormals();
   return geo;
 }
 
-function Tooth({ def }: { def: ToothDef }) {
-  const material = useMemo(() => new ToothMaterial(), []);
-  const geometry = useMemo(() => toothGeometry(def), [def]);
-  const zones = useMemo(() => zonesForTooth(def), [def]);
-  const rotation = useMemo<[number, number, number]>(() => {
-    const yaw = Math.atan2(def.outward[0], def.outward[2]);
-    return def.row === 'upper' ? [Math.PI, -yaw, 0] : [0, yaw, 0];
-  }, [def]);
+/** Rotation that maps local +X/+Y/+Z to (row direction, towards the edge, outward). */
+function toothQuaternion(t: ToothDef): THREE.Quaternion {
+  const gs = gumSign(t);
+  const x = new THREE.Vector3(...t.tangent).multiplyScalar(-gs); // keep the basis right-handed
+  const y = new THREE.Vector3(0, -gs, 0);
+  const z = new THREE.Vector3(...t.outward);
+  const m = new THREE.Matrix4().makeBasis(x, y, z);
+  return new THREE.Quaternion().setFromRotationMatrix(m);
+}
 
-  useFrame((state) => {
-    const u = material.uniforms;
-    u.uCleanOuter.value = runtime.zoneClean[zones.outside];
-    u.uCleanInner.value = runtime.zoneClean[zones.inside];
-    u.uTime.value = state.clock.elapsedTime;
+/** Subtle ivory variation per tooth. */
+function toothTint(t: ToothDef): THREE.Color {
+  const k = ((t.index * 7919) % 97) / 97;
+  return new THREE.Color().setHSL(0.11 - k * 0.02, 0.2 + k * 0.1, 0.84 - k * 0.04);
+}
+
+function Tooth({ def, highQuality }: { def: ToothDef; highQuality: boolean }) {
+  const plaqueTex = useMemo(() => createPlaqueTexture(), []);
+  const material = useMemo(
+    () => new EnamelMaterial(plaqueTex, def.size, def.row === 'upper', toothTint(def), highQuality),
+    [plaqueTex, def, highQuality],
+  );
+  const geometry = useMemo(() => toothGeometry(def, highQuality), [def, highQuality]);
+  const quaternion = useMemo(() => toothQuaternion(def), [def]);
+  const scratch = useMemo(() => new Uint8Array(96), []);
+
+  useFrame(() => {
+    const p = runtime.plaque;
+    if (p.changed[def.index]) {
+      p.changed[def.index] = 0;
+      writeToothImage(p, def.index, scratch);
+      (plaqueTex.image.data as Uint8Array).set(scratch);
+      plaqueTex.needsUpdate = true;
+    }
   });
 
-  return <mesh geometry={geometry} material={material} position={def.pos} rotation={rotation} />;
+  return <mesh geometry={geometry} material={material} position={def.pos} quaternion={quaternion} />;
 }
 
 function archCurve(y: number, scale = 1, lift = 0): THREE.CatmullRomCurve3 {
@@ -71,33 +115,75 @@ function archCurve(y: number, scale = 1, lift = 0): THREE.CatmullRomCurve3 {
   return new THREE.CatmullRomCurve3(pts);
 }
 
-const GUM = '#f6a9c4';
-const GUM_DEEP = '#ef93b4';
-const LIP = '#f08bb3';
-const TONGUE = '#f47c9d';
+const GUM = '#e8a0b6';
+const GUM_DEEP = '#d98aa4';
+const GUM_MARGIN = '#d27d9b';
+const LIP = '#de8aa6';
+const TONGUE = '#df7b95';
 
-function Gums() {
-  const gumMat = useMemo(() => toon(GUM), []);
-  const gumDark = useMemo(() => toon(GUM_DEEP), []);
-  const upper = useMemo(() => new THREE.TubeGeometry(archCurve(UPPER_GUM_Y + 0.32, 1.0), 48, 0.6, 16, false), []);
-  const lower = useMemo(() => new THREE.TubeGeometry(archCurve(LOWER_GUM_Y - 0.32, 1.0), 48, 0.6, 16, false), []);
+function gumMaterial(color: string): THREE.MeshStandardMaterial {
+  return new THREE.MeshStandardMaterial({ color, roughness: 0.6, metalness: 0, envMapIntensity: 0.3 });
+}
+
+function Gums({ highQuality }: { highQuality: boolean }) {
+  const gum = useMemo(() => gumMaterial(GUM), []);
+  const deep = useMemo(() => gumMaterial(GUM_DEEP), []);
+  const margin = useMemo(() => gumMaterial(GUM_MARGIN), []);
+  const seg = highQuality ? 64 : 40;
+  const upper = useMemo(() => new THREE.TubeGeometry(archCurve(UPPER_GUM_Y + 0.34, 1.0), seg, 0.58, 18, false), [seg]);
+  const lower = useMemo(() => new THREE.TubeGeometry(archCurve(LOWER_GUM_Y - 0.34, 1.0), seg, 0.58, 18, false), [seg]);
   const upperInner = useMemo(() => new THREE.TubeGeometry(archCurve(UPPER_GUM_Y + 0.55, 0.78), 40, 0.5, 12, false), []);
   const lowerInner = useMemo(() => new THREE.TubeGeometry(archCurve(LOWER_GUM_Y - 0.55, 0.78), 40, 0.5, 12, false), []);
+  // scalloped gumline: a collar around every tooth neck + papillae between neighbours
+  const collars = useMemo(
+    () =>
+      TEETH.map((t) => {
+        const gs = gumSign(t);
+        const y = t.pos[1] + gs * (t.size[1] / 2 - 0.1);
+        const q = new THREE.Quaternion().setFromUnitVectors(new THREE.Vector3(0, 0, 1), new THREE.Vector3(0, 1, 0));
+        const yaw = new THREE.Quaternion().setFromAxisAngle(new THREE.Vector3(0, 1, 0), Math.atan2(t.outward[0], t.outward[2]));
+        return { pos: [t.pos[0], y, t.pos[2]] as [number, number, number], quat: yaw.multiply(q), scale: [t.size[0] / 2 + 0.08, t.size[2] / 2 + 0.08, 1] as [number, number, number] };
+      }),
+    [],
+  );
+  const papillae = useMemo(() => {
+    const out: [number, number, number][] = [];
+    for (const row of ['upper', 'lower'] as const) {
+      const teeth = TEETH.filter((t) => t.row === row);
+      for (let i = 0; i + 1 < teeth.length; i++) {
+        const a = teeth[i];
+        const b = teeth[i + 1];
+        const gs = gumSign(a);
+        out.push([(a.pos[0] + b.pos[0]) / 2, (a.pos[1] + b.pos[1]) / 2 + gs * (a.size[1] / 2 - 0.02), (a.pos[2] + b.pos[2]) / 2]);
+      }
+    }
+    return out;
+  }, []);
   return (
     <group>
-      <mesh geometry={upper} material={gumMat} />
-      <mesh geometry={lower} material={gumMat} />
-      <mesh geometry={upperInner} material={gumDark} />
-      <mesh geometry={lowerInner} material={gumDark} />
+      <mesh geometry={upper} material={gum} />
+      <mesh geometry={lower} material={gum} />
+      <mesh geometry={upperInner} material={deep} />
+      <mesh geometry={lowerInner} material={deep} />
+      {collars.map((c, i) => (
+        <mesh key={`c${i}`} position={c.pos} quaternion={c.quat} scale={c.scale} material={margin}>
+          <torusGeometry args={[1, 0.3, 8, 22]} />
+        </mesh>
+      ))}
+      {papillae.map((p, i) => (
+        <mesh key={`p${i}`} position={p} material={gum}>
+          <sphereGeometry args={[0.16, 12, 10]} />
+        </mesh>
+      ))}
       {/* palate */}
-      <mesh position={[0, UPPER_GUM_Y + 1.1, -0.6]} scale={[2.9, 0.9, 2.9]} material={gumDark}>
+      <mesh position={[0, UPPER_GUM_Y + 1.1, -0.6]} scale={[2.9, 0.9, 2.9]} material={deep}>
         <sphereGeometry args={[1, 28, 18, 0, Math.PI * 2, 0, Math.PI / 2]} />
       </mesh>
-      <mesh position={[0, UPPER_GUM_Y + 1.1, -0.6]} rotation={[Math.PI, 0, 0]} scale={[2.9, 0.2, 2.9]} material={gumDark}>
+      <mesh position={[0, UPPER_GUM_Y + 1.1, -0.6]} rotation={[Math.PI, 0, 0]} scale={[2.9, 0.2, 2.9]} material={deep}>
         <sphereGeometry args={[1, 28, 8, 0, Math.PI * 2, 0, Math.PI / 2]} />
       </mesh>
       {/* floor of the mouth */}
-      <mesh position={[0, LOWER_GUM_Y - 1.0, -0.6]} rotation={[Math.PI, 0, 0]} scale={[2.9, 0.8, 2.9]} material={gumDark}>
+      <mesh position={[0, LOWER_GUM_Y - 1.0, -0.6]} rotation={[Math.PI, 0, 0]} scale={[2.9, 0.8, 2.9]} material={deep}>
         <sphereGeometry args={[1, 28, 18, 0, Math.PI * 2, 0, Math.PI / 2]} />
       </mesh>
     </group>
@@ -105,33 +191,29 @@ function Gums() {
 }
 
 function Tongue() {
-  const mat = useMemo(() => toon(TONGUE), []);
-  const tip = useMemo(() => toon('#f78fac'), []);
+  const mat = useMemo(() => new THREE.MeshStandardMaterial({ color: TONGUE, roughness: 0.55, envMapIntensity: 0.3 }), []);
+  const groove = useMemo(() => new THREE.MeshStandardMaterial({ color: '#d96d8b', roughness: 0.6 }), []);
   const ref = useRef<THREE.Group>(null);
   useFrame((state) => {
     if (!ref.current) return;
     const t = state.clock.elapsedTime;
-    ref.current.position.y = LOWER_GUM_Y - 0.25 + Math.sin(t * 1.3) * 0.04;
-    ref.current.rotation.x = -0.15 + Math.sin(t * 0.9) * 0.03;
+    ref.current.position.y = TONGUE_CENTER[1] + Math.sin(t * 1.3) * 0.03;
   });
   return (
-    <group ref={ref} position={[0, LOWER_GUM_Y - 0.25, -0.8]}>
-      <mesh scale={[1.9, 0.5, 2.4]} material={mat}>
-        <sphereGeometry args={[1, 32, 20]} />
+    <group ref={ref} position={TONGUE_CENTER}>
+      <mesh scale={TONGUE_HALF} material={mat}>
+        <sphereGeometry args={[1, 36, 24]} />
       </mesh>
-      {/* glossy highlight blob + friendly rounded tip */}
-      <mesh position={[0, 0.35, 1.6]} scale={[1.2, 0.35, 0.9]} material={tip}>
-        <sphereGeometry args={[1, 20, 12]} />
-      </mesh>
-      <mesh position={[-0.5, 0.42, 0.4]} scale={[0.5, 0.08, 0.7]} material={tip}>
-        <sphereGeometry args={[1, 14, 10]} />
+      {/* median groove */}
+      <mesh position={[0, TONGUE_HALF[1] - 0.02, -0.3]} scale={[0.09, 0.05, 1.6]} material={groove}>
+        <sphereGeometry args={[1, 10, 8]} />
       </mesh>
     </group>
   );
 }
 
 function Lips() {
-  const mat = useMemo(() => toon(LIP), []);
+  const mat = useMemo(() => new THREE.MeshStandardMaterial({ color: LIP, roughness: 0.5, envMapIntensity: 0.3 }), []);
   const upper = useMemo(() => new THREE.TubeGeometry(archCurve(UPPER_GUM_Y + 1.25, 1.36, -0.1), 48, 0.42, 14, false), []);
   const lower = useMemo(() => new THREE.TubeGeometry(archCurve(LOWER_GUM_Y - 1.25, 1.36, 0.1), 48, 0.42, 14, false), []);
   return (
@@ -143,7 +225,7 @@ function Lips() {
 }
 
 function Backdrop() {
-  const mat = useMemo(() => new GradientBackdropMaterial('#ffd3e4', '#b7628e'), []);
+  const mat = useMemo(() => new GradientBackdropMaterial('#ffd9e6', '#b86d95'), []);
   return (
     <mesh material={mat} position={[0, 0, -2]}>
       <sphereGeometry args={[18, 32, 24]} />
@@ -151,15 +233,15 @@ function Backdrop() {
   );
 }
 
-export function Arena() {
+export function Arena({ highQuality }: { highQuality: boolean }) {
   return (
     <group>
       <Backdrop />
-      <Gums />
+      <Gums highQuality={highQuality} />
       <Lips />
       <Tongue />
       {TEETH.map((t) => (
-        <Tooth key={t.index} def={t} />
+        <Tooth key={t.index} def={t} highQuality={highQuality} />
       ))}
     </group>
   );
@@ -168,11 +250,11 @@ export function Arena() {
 export function Lights() {
   return (
     <>
-      {/* kept well below clipping so toon-shaded teeth never flatten to pure white */}
-      <hemisphereLight args={['#fff6fa', '#d98ab0', 0.6]} />
-      <directionalLight position={[4, 8, 6]} intensity={0.75} color="#fff7ec" />
-      <directionalLight position={[-6, 2, 4]} intensity={0.35} color="#cfe6ff" />
-      <pointLight position={[0, -0.6, 5]} intensity={0.5} distance={12} color="#ffe3ef" />
+      {/* kept low: the enamel is near-white, so anything brighter blows the teeth out */}
+      <hemisphereLight args={['#fff1f6', '#b86d8f', 0.32]} />
+      <directionalLight position={[4, 8, 6]} intensity={0.95} color="#fff7ec" />
+      <directionalLight position={[-6, 2, 4]} intensity={0.3} color="#cfe6ff" />
+      <pointLight position={[0, -0.6, 5]} intensity={0.25} distance={12} color="#ffe3ef" />
     </>
   );
 }

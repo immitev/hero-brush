@@ -1,13 +1,13 @@
 /** Session + Victory share the 3D scene; the overlay switches with the phase. */
 import { useEffect, useState } from 'react';
 import { sfx } from '../../audio/sfx';
+import { SEGMENTS, formatClock } from '../../game/segments';
 import { type SessionResult, useStore } from '../../game/store';
 import { type SessionOutcome, useSessionRunner } from '../../game/useSessionRunner';
-import { ZONES, formatClock } from '../../game/zones';
 import { getHero, getSuit } from '../../heroes';
 import { type MessageKey, type Translator, useT } from '../../i18n';
 import { GameScene } from '../../scene/GameScene';
-import { PauseIcon, StarIcon } from '../components/Icons';
+import { MotionIcon, PauseIcon, StarIcon } from '../components/Icons';
 import { MouthMap } from '../components/MouthMap';
 
 export function Play() {
@@ -44,9 +44,16 @@ function CountdownOverlay({ heroName }: { heroName: string }) {
   );
 }
 
+/** i18n key of the coaching instruction for a segment. */
+export function instructionKey(segmentIndex: number): MessageKey {
+  const s = SEGMENTS[segmentIndex];
+  if (s.motion === 'flick') return s.row === 'upper' ? 'motion.flickDown' : 'motion.flickUp';
+  return `motion.${s.motion}` as MessageKey;
+}
+
 function Hud({ onPause }: { onPause: () => void }) {
   const hud = useStore((s) => s.hud);
-  const zone = ZONES[hud.zoneIndex];
+  const seg = SEGMENTS[hud.segmentIndex];
   const urgent = hud.timeLeft <= 10 && hud.phase === 'playing';
   const { t } = useT();
   return (
@@ -56,26 +63,27 @@ function Hud({ onPause }: { onPause: () => void }) {
           <button className="icon-btn" onClick={onPause} aria-label={t('play.pause')}>
             <PauseIcon />
           </button>
-          <div className="hud-zone" key={zone.id}>
+          <div className="hud-zone" key={seg.id}>
             <div className="hud-zone-label">{t('play.brush')}</div>
-            <div className="hud-zone-name">{t(`zone.${zone.id}` as MessageKey)}</div>
+            <div className="hud-zone-name">{t(`seg.${seg.id}` as MessageKey)}</div>
           </div>
-          <MouthMap zoneIndex={hud.zoneIndex} size={84} />
+          <MouthMap segmentIndex={hud.segmentIndex} size={84} />
         </div>
-        {hud.bossActive && (
-          <div className="boss-bar" role="progressbar" aria-valuenow={Math.round(hud.bossHealth * 100)} aria-valuemin={0} aria-valuemax={100}>
-            <div className="boss-bar-label">{t('play.boss')}</div>
-            <div className="boss-bar-track">
-              <div className="boss-bar-fill" style={{ width: `${hud.bossHealth * 100}%` }} />
-            </div>
+        {hud.phase === 'playing' && (
+          <div className="coach" key={`coach-${seg.id}`} role="status">
+            <MotionIcon motion={seg.motion} flickDown={seg.row === 'upper'} size={60} />
+            <div className="coach-text">{t(instructionKey(hud.segmentIndex))}</div>
           </div>
         )}
       </div>
       <div className="hud-bottom">
-        <div className={`clock ${urgent ? 'urgent' : ''} ${hud.bossActive ? 'boss' : ''}`}>{formatClock(hud.timeLeft)}</div>
+        <div className={`clock ${urgent ? 'urgent' : ''}`}>{formatClock(hud.timeLeft)}</div>
+        <div className="clean-bar" role="progressbar" aria-label={t('play.cleanAria')} aria-valuenow={Math.round(hud.clean * 100)} aria-valuemin={0} aria-valuemax={100}>
+          <div className="clean-bar-fill" style={{ width: `${Math.round(hud.clean * 100)}%` }} />
+        </div>
         <div className="zone-dots">
-          {ZONES.map((z) => (
-            <span key={z.id} className={z.index < hud.zoneIndex ? 'done' : z.index === hud.zoneIndex ? 'active' : ''} />
+          {SEGMENTS.map((s) => (
+            <span key={s.id} className={s.index < hud.segmentIndex ? 'done' : s.index === hud.segmentIndex ? 'active' : ''} />
           ))}
         </div>
       </div>
@@ -167,7 +175,8 @@ function VictoryOverlay({ outcome, result, heroName }: { outcome: SessionOutcome
           {result ? (result.streak.current > 0 ? tn('victory.streak', result.streak.current) : t('victory.noStreak')) : t('victory.saving')}
           {hint && <small>{hint}</small>}
         </div>
-        <div className="rinse">{t('victory.rinse')}</div>
+        <div className="rinse">{t('victory.spit')}</div>
+        <small className="rinse-why">{t('victory.spitWhy')}</small>
       </div>
       <button className="btn btn-big" onClick={() => go('hub')}>
         {t('victory.done')}

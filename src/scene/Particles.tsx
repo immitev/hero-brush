@@ -1,12 +1,11 @@
 /**
- * Instanced particle bursts (pops, boss hits, sparkles) and foam bubbles.
- * Consumes `runtime.events` each frame.
+ * Foam bubbles along the brush head and sparkles when a tooth surface comes
+ * clean. Consumes `runtime.events` each frame.
  */
 import { useFrame } from '@react-three/fiber';
 import { useMemo, useRef } from 'react';
 import * as THREE from 'three';
 import { sfx } from '../audio/sfx';
-import { teethForZone, perchOn } from '../game/mouth';
 import { runtime } from '../game/runtime';
 
 interface P {
@@ -34,26 +33,17 @@ function makePool(n: number): P[] {
 }
 
 export function Particles({ quality }: { quality: 'low' | 'high' }) {
-  const burstCount = quality === 'high' ? 360 : 140;
-  const foamCount = quality === 'high' ? 90 : 30;
+  const burstCount = quality === 'high' ? 240 : 100;
+  const foamCount = quality === 'high' ? 110 : 40;
   const burstRef = useRef<THREE.InstancedMesh>(null);
   const foamRef = useRef<THREE.InstancedMesh>(null);
   const bursts = useMemo(() => makePool(burstCount), [burstCount]);
   const foam = useMemo(() => makePool(foamCount), [foamCount]);
   const burstMat = useMemo(() => new THREE.MeshBasicMaterial({ toneMapped: false }), []);
-  const foamMat = useMemo(
-    () =>
-      new THREE.MeshToonMaterial({
-        color: '#ffffff',
-        transparent: true,
-        opacity: 0.7,
-        depthWrite: false,
-      }),
-    [],
-  );
+  const foamMat = useMemo(() => new THREE.MeshStandardMaterial({ color: '#ffffff', roughness: 0.4, transparent: true, opacity: 0.8, depthWrite: false }), []);
   const burstGeo = useMemo(() => new THREE.IcosahedronGeometry(1, 0), []);
   const foamGeo = useMemo(() => new THREE.SphereGeometry(1, 10, 8), []);
-  const sparkleTimer = useRef(0);
+  const foamTimer = useRef(0);
 
   const emit = (pool: P[], x: number, y: number, z: number, hex: string, count: number, speed: number, size: number, life: number, gravity: number) => {
     color.set(hex);
@@ -82,72 +72,38 @@ export function Particles({ quality }: { quality: 'low' | 'high' }) {
     }
   };
 
-  useFrame((state, dtRaw) => {
+  useFrame((_state, dtRaw) => {
     const rt = runtime;
-    if (rt.paused) return; // freeze everything (no spawning, no integration) while paused
+    if (rt.paused) return;
     const dt = Math.min(dtRaw, 0.05);
     const hi = quality === 'high';
-    // consume events
     for (const e of rt.events) {
-      if (e.type === 'pop') {
-        emit(bursts, e.pos[0], e.pos[1] + 0.25, e.pos[2], e.color, e.count ?? 16, 3.0, 0.08, 0.7, 4);
-        emit(bursts, e.pos[0], e.pos[1] + 0.25, e.pos[2], '#9af5ff', 6, 2, 0.05, 0.5, 0);
-        sfx.pop();
-      } else if (e.type === 'scrub') {
-        // foam puffs around the monster + tiny sparkles
-        const px = e.pos[0] + e.normal[0] * 0.2;
-        const py = e.pos[1] + e.normal[1] * 0.2 + 0.2;
-        const pz = e.pos[2] + e.normal[2] * 0.2;
-        emit(foam, px, py, pz, '#ffffff', hi ? 3 : 1, 0.6, 0.05, 1.0, -0.25);
-        emit(bursts, px, py, pz, '#ffffff', 2, 0.8, 0.03, 0.4, 0);
+      if (e.type === 'stroke') {
+        emit(foam, e.pos[0], e.pos[1], e.pos[2], '#ffffff', hi ? 3 : 1, 0.45, 0.05, 1.1, -0.2);
         sfx.scrub();
-      } else if (e.type === 'foamed') {
-        emit(foam, e.pos[0], e.pos[1] + 0.25, e.pos[2], '#ffffff', hi ? 6 : 3, 1.0, 0.06, 1.0, -0.2);
+      } else if (e.type === 'toothClean') {
+        emit(bursts, e.pos[0], e.pos[1], e.pos[2], '#ffffff', hi ? 10 : 6, 1.2, 0.045, 0.7, -0.3);
+        emit(bursts, e.pos[0], e.pos[1], e.pos[2], '#9af5ff', 5, 1.0, 0.035, 0.7, -0.3);
         sfx.squeak();
-      } else if (e.type === 'bossFoam') {
-        emit(foam, e.pos[0], e.pos[1] + (Math.random() - 0.5) * 1.2, e.pos[2], '#ffffff', hi ? 4 : 2, 0.9, 0.09, 1.3, -0.2);
-        sfx.scrub();
-      } else if (e.type === 'bossHit') {
-        emit(bursts, e.pos[0], e.pos[1], e.pos[2] + 0.3, '#d8b4fe', 18, 3.0, 0.09, 0.6, 3);
-        emit(bursts, e.pos[0], e.pos[1], e.pos[2] + 0.3, '#ffffff', 8, 2.5, 0.06, 0.4, 0);
-        sfx.bossHit();
-      } else if (e.type === 'bossDefeated') {
-        emit(bursts, e.pos[0], e.pos[1], e.pos[2], '#c084fc', 90, 5, 0.16, 1.4, 3);
-        emit(bursts, e.pos[0], e.pos[1], e.pos[2], '#ffd166', 60, 6, 0.1, 1.6, 2);
-        emit(bursts, e.pos[0], e.pos[1], e.pos[2], '#ffffff', 40, 4, 0.08, 1.2, 0);
-        emit(foam, e.pos[0], e.pos[1], e.pos[2], '#ffffff', 30, 3, 0.16, 1.5, 0.5);
-        sfx.bossDefeated();
-      } else if (e.type === 'zoneClean') {
-        for (const t of teethForZone(e.zoneIndex)) {
-          const zone = e.zoneIndex;
-          const perch = perchOn(t, zone >= 4 ? 'chewing' : 'outside', 0.1);
-          emit(bursts, perch.pos[0], perch.pos[1], perch.pos[2], '#ffffff', 4, 1.2, 0.06, 0.8, -0.5);
-          emit(bursts, perch.pos[0], perch.pos[1], perch.pos[2], '#9af5ff', 3, 1.0, 0.05, 0.8, -0.5);
-        }
+      } else if (e.type === 'segmentDone') {
+        sfx.zoneChime();
+      } else if (e.type === 'allClean') {
         sfx.sparkle();
-      } else if (e.type === 'sparkle') {
-        emit(bursts, e.pos[0], e.pos[1] + 0.2, e.pos[2], '#ffffff', 5, 1, 0.05, 0.6, -0.4);
       }
     }
     rt.events.length = 0;
 
-    // ambient sparkles on clean teeth of the current zone
-    if (rt.phase === 'playing' || rt.phase === 'victory') {
-      sparkleTimer.current -= dt;
-      if (sparkleTimer.current <= 0) {
-        sparkleTimer.current = hi ? 0.18 : 0.35;
-        const zi = rt.phase === 'victory' ? Math.floor(Math.random() * 6) : rt.zoneIndex;
-        const clean = rt.phase === 'victory' ? 1 : rt.zoneClean[zi];
-        if (clean > 0.5) {
-          const teeth = teethForZone(zi);
-          const t = teeth[Math.floor(Math.random() * teeth.length)];
-          const perch = perchOn(t, zi >= 4 ? 'chewing' : 'outside', 0.05);
-          emit(bursts, perch.pos[0] + (Math.random() - 0.5) * 0.4, perch.pos[1] + (Math.random() - 0.5) * 0.4, perch.pos[2], '#ffffff', 2, 0.4, 0.04 + clean * 0.03, 0.5, -0.6);
-        }
+    // a steady trickle of small foam bubbles while the bristles are on a surface
+    if (rt.phase === 'playing' && rt.brush.contact) {
+      foamTimer.current -= dt;
+      if (foamTimer.current <= 0) {
+        foamTimer.current = hi ? 0.09 : 0.2;
+        const b = rt.brush;
+        const jx = (Math.random() - 0.5) * 0.5;
+        emit(foam, b.pos[0] + b.axis[0] * jx, b.pos[1] + b.axis[1] * jx + 0.02, b.pos[2] + b.axis[2] * jx, '#ffffff', 1, 0.2, 0.04, 1.0, -0.15);
       }
     }
 
-    // integrate
     const stepPool = (pool: P[], mesh: THREE.InstancedMesh | null, colored: boolean, shrink: boolean) => {
       if (!mesh) return;
       let i = 0;
@@ -182,7 +138,6 @@ export function Particles({ quality }: { quality: 'low' | 'high' }) {
     };
     stepPool(bursts, burstRef.current, true, true);
     stepPool(foam, foamRef.current, false, false);
-    void state;
   });
 
   return (

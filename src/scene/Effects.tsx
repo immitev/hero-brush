@@ -1,10 +1,10 @@
-import { Bloom, EffectComposer, Vignette } from '@react-three/postprocessing';
+import { EffectComposer, Vignette } from '@react-three/postprocessing';
 
+/** High-quality tier only: a light vignette (bloom was removed: it hazed the near-white teeth). */
 export function Effects() {
   return (
     <EffectComposer multisampling={0}>
-      <Bloom mipmapBlur luminanceThreshold={1.0} luminanceSmoothing={0.02} intensity={0.8} radius={0.6} />
-      <Vignette eskil={false} offset={0.3} darkness={0.35} />
+      <Vignette eskil={false} offset={0.35} darkness={0.3} />
     </EffectComposer>
   );
 }

@@ -105,7 +105,7 @@ class Music {
 
   /**
    * Re-aligns the sequencer so that musical time equals `seconds` from now on
-   * (used at zone/boss transitions so the boss build-up stays with the boss).
+   * (used at segment transitions so the music's final build-up lands on the last segments).
    * Small drift is ignored; larger drift skips/rewinds steps.
    */
   syncTo(seconds: number, tolerance = 0.12): void {

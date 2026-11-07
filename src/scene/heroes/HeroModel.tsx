@@ -1,8 +1,9 @@
 /**
  * Procedural chibi heroes built from primitives. Each hero returns a group
- * whose origin is at the feet, roughly 1.8 units tall, holding a big cartoon
- * toothbrush in the right hand. The `HeroAnim` ref drives idle / travel /
- * scrub / celebrate motion.
+ * whose origin is at the feet, roughly 1.8 units tall. The `HeroAnim` ref
+ * drives idle / travel / brush / celebrate motion. In the arena the right arm
+ * reaches for a world-space hand target (the grip of the demo toothbrush);
+ * on the hero-select carousel the hero holds a small brush of its own.
  */
 import { useFrame } from '@react-three/fiber';
 import { type MutableRefObject, useMemo, useRef } from 'react';
@@ -16,17 +17,25 @@ export type HeroMode = 'idle' | 'fight' | 'celebrate';
 
 export interface HeroAnim {
   mode: HeroMode;
-  /** From the simulation while fighting. */
+  /** From the simulation while brushing. */
   state: HeroState;
   /** Travel speed (world units / s). */
   speed: number;
   /** Seconds since entering the current mode. */
   modeT: number;
-  /** Extra yaw of the brush arm (radians) so it keeps pointing at the monster while the body faces the camera. */
-  armYaw: number;
-  /** Pitch of the brush arm (radians, positive = up) towards a monster above/below the hand. */
-  armPitch: number;
+  /** World position the right hand reaches for (the brush grip), or null for the default pose. */
+  handTarget: THREE.Vector3 | null;
+  /** Show the small hand-held brush (carousel). */
+  holdBrush: boolean;
 }
+
+/** Arm length from the shoulder pivot to the palm, in hero-local units. */
+const ARM_REACH = 0.62;
+const _shoulder = new THREE.Vector3();
+const _dir = new THREE.Vector3();
+const _q = new THREE.Quaternion();
+const _scale = new THREE.Vector3();
+const _down = new THREE.Vector3(0, -1, 0);
 
 export interface HeroModelProps {
   hero: HeroPack;
@@ -47,7 +56,6 @@ interface Rig {
 const HEAD_R = 0.46;
 const BODY_Y = 0.78;
 const HEAD_Y = 1.42;
-export const SCRUB_HZ = 8;
 
 function useRig() {
   const root = useRef<THREE.Group>(null);
@@ -83,7 +91,7 @@ function animateCommon(rig: Rig, anim: HeroAnim, t: number, style: 'hover' | 'sw
   const { root, body, head, armL, armR, legL, legR } = rig;
   const travel = THREE.MathUtils.clamp(anim.speed / 5, 0, 1);
   const fighting = anim.mode === 'fight';
-  const scrubbing = fighting && anim.state === 'scrub';
+  const brushing = fighting && anim.state === 'brush';
 
   const p: Pose = { armLX: 0.2 + Math.sin(t * 2.2) * 0.1, armLZ: 0.3, armRX: 0.2 + Math.sin(t * 2.2 + 1) * 0.1, armRZ: -0.3, legLX: 0, legRX: 0, rootX: Math.sin(t * 1.5) * 0.03, hover: 0 };
 
@@ -135,25 +143,35 @@ function animateCommon(rig: Rig, anim: HeroAnim, t: number, style: 'hover' | 'sw
   head.rotation.x = Math.sin(t * 1.3) * 0.04;
   body.rotation.set(0, 0, 0);
 
-  let armRZ = p.armRZ;
-  if (scrubbing) {
-    // fast back-and-forth scrubbing: the hand swings sideways on a tight arc
-    const s = Math.sin(t * Math.PI * 2 * SCRUB_HZ);
-    armRZ = p.armRZ + s * 0.42;
-    body.rotation.y = s * 0.08;
-    body.rotation.z = s * 0.04;
-    head.rotation.y = s * 0.12;
-    root.position.y += Math.abs(s) * 0.03;
+  if (brushing) {
+    // the brush itself is driven by the choreography; the body just sways with the effort
+    const s = Math.sin(t * Math.PI * 2 * 2);
+    body.rotation.y = s * 0.05;
+    head.rotation.y = s * 0.08;
+    root.position.y += Math.abs(s) * 0.02;
   } else {
     head.rotation.y = 0;
   }
 
   armL.rotation.set(p.armLX, 0, p.armLZ);
-  // YXZ: tilt (z) and raise (x) first, then yaw the whole raised arm around the shoulder
-  armR.rotation.order = 'YXZ';
-  armR.rotation.set(p.armRX - (fighting ? anim.armPitch : 0), fighting ? anim.armYaw : 0, armRZ);
+  armR.rotation.order = 'XYZ';
+  armR.rotation.set(p.armRX, 0, p.armRZ);
   legL.rotation.set(p.legLX, 0, 0.08);
   legR.rotation.set(p.legRX, 0, -0.08);
+
+  // reach for the brush grip: point the right arm at the target and stretch it to touch
+  if (fighting && anim.handTarget) {
+    armR.getWorldPosition(_shoulder);
+    _dir.copy(anim.handTarget).sub(_shoulder);
+    const len = _dir.length();
+    body.getWorldQuaternion(_q).invert();
+    _dir.applyQuaternion(_q).normalize();
+    armR.quaternion.setFromUnitVectors(_down, _dir);
+    const worldScale = root.getWorldScale(_scale).y || 1;
+    armR.scale.y = THREE.MathUtils.clamp(len / (ARM_REACH * worldScale), 0.75, 1.7);
+  } else {
+    armR.scale.y = 1;
+  }
   return travel;
 }
 
@@ -169,10 +187,10 @@ function Limb({ length, radius, material, children, offsetY = 0 }: { length: num
 }
 
 /* ---------------------------------------------------------------------- */
-/* Toothbrush: handle along +X from the hand, bristles facing -Y (forward  */
-/* when the arm is raised).                                                 */
+/* Small hand-held toothbrush for the carousel: handle along +X from the   */
+/* hand, bristles facing -Y.                                                */
 /* ---------------------------------------------------------------------- */
-function Brush({ palette }: { palette: HeroPalette }) {
+function HandBrush({ palette, visibleRef }: { palette: HeroPalette; visibleRef: MutableRefObject<THREE.Group | null> }) {
   const m = useMemo(
     () => ({
       handle: toon(palette.brush),
@@ -186,7 +204,7 @@ function Brush({ palette }: { palette: HeroPalette }) {
     [palette],
   );
   return (
-    <group rotation={[0, 0, 0]}>
+    <group ref={visibleRef} rotation={[0, 0, 0]}>
       {/* handle */}
       <mesh position={[0.3, 0, 0]} rotation={[0, 0, Math.PI / 2]} material={m.handle}>
         <capsuleGeometry args={[0.065, 0.55, 4, 10]} />
@@ -228,6 +246,7 @@ function Brush({ palette }: { palette: HeroPalette }) {
 /* ---------------------------------------------------------------------- */
 function IronMan({ suit, anim }: HeroModelProps) {
   const { refs, get } = useRig();
+  const handBrush = useRef<THREE.Group | null>(null);
   const p = suit.palette;
   const m = useMemo(
     () => ({
@@ -248,6 +267,7 @@ function IronMan({ suit, anim }: HeroModelProps) {
     const t = state.clock.elapsedTime;
     const a = anim.current;
     const travel = animateCommon(rig, a, t, 'hover');
+    if (handBrush.current) handBrush.current.visible = a.holdBrush;
     const fighting = a.mode === 'fight';
     for (const f of flames.current) {
       if (!f) continue;
@@ -309,7 +329,7 @@ function IronMan({ suit, anim }: HeroModelProps) {
               <sphereGeometry args={[0.13, 12, 10]} />
             </mesh>
             <group position={[0, -0.52, 0]}>
-              <Brush palette={p} />
+              <HandBrush palette={p} visibleRef={handBrush} />
             </group>
           </Limb>
         </group>
@@ -340,6 +360,7 @@ function IronMan({ suit, anim }: HeroModelProps) {
 /* ---------------------------------------------------------------------- */
 function SpiderMan({ suit, anim }: HeroModelProps) {
   const { refs, get } = useRig();
+  const handBrush = useRef<THREE.Group | null>(null);
   const p = suit.palette;
   const m = useMemo(() => {
     const web = webTexture(p.primary, p.accent, 2);
@@ -361,6 +382,7 @@ function SpiderMan({ suit, anim }: HeroModelProps) {
     const t = state.clock.elapsedTime;
     const a = anim.current;
     const travel = animateCommon(rig, a, t, 'swing');
+    if (handBrush.current) handBrush.current.visible = a.holdBrush;
     const want = a.mode === 'fight' ? travel : 0;
     lineOpacity.current += (want - lineOpacity.current) * (1 - Math.exp(-dt * 8));
     if (swingPivot.current) {
@@ -414,7 +436,7 @@ function SpiderMan({ suit, anim }: HeroModelProps) {
                   <sphereGeometry args={[0.12, 12, 10]} />
                 </mesh>
                 <group position={[0, -0.52, 0]}>
-                  <Brush palette={p} />
+                  <HandBrush palette={p} visibleRef={handBrush} />
                 </group>
               </Limb>
             </group>
@@ -445,6 +467,7 @@ function SpiderMan({ suit, anim }: HeroModelProps) {
 /* ---------------------------------------------------------------------- */
 function Batman({ suit, anim }: HeroModelProps) {
   const { refs, get } = useRig();
+  const handBrush = useRef<THREE.Group | null>(null);
   const p = suit.palette;
   const m = useMemo(
     () => ({
@@ -472,6 +495,7 @@ function Batman({ suit, anim }: HeroModelProps) {
     const t = state.clock.elapsedTime;
     const a = anim.current;
     const travel = animateCommon(rig, a, t, 'glide');
+    if (handBrush.current) handBrush.current.visible = a.holdBrush;
     const want = a.mode === 'fight' ? 0.3 + travel * 0.7 : 0.2;
     spread.current += (want - spread.current) * (1 - Math.exp(-dt * 6));
     const c = cape.current;
@@ -532,7 +556,7 @@ function Batman({ suit, anim }: HeroModelProps) {
               <sphereGeometry args={[0.12, 12, 10]} />
             </mesh>
             <group position={[0, -0.52, 0]}>
-              <Brush palette={p} />
+              <HandBrush palette={p} visibleRef={handBrush} />
             </group>
           </Limb>
         </group>
@@ -579,5 +603,5 @@ export function HeroModel(props: HeroModelProps) {
 }
 
 export function createHeroAnim(mode: HeroMode = 'idle'): HeroAnim {
-  return { mode, state: 'idle', speed: 0, modeT: 0, armYaw: 0, armPitch: 0 };
+  return { mode, state: 'idle', speed: 0, modeT: 0, handTarget: null, holdBrush: true };
 }

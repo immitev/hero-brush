@@ -101,52 +101,8 @@ export const sfx = {
     noise(ctx, out, t, 'bandpass', 1200, 400, 0.12, 0.15, 1);
   },
 
-  bossHit(): void {
-    const g = graph();
-    if (!g) return;
-    const { ctx, out, t } = g;
-    tone(ctx, out, t, 'square', 180, 60, 0.25, 0.25);
-    noise(ctx, out, t, 'lowpass', 2500, 200, 0.25, 0.3);
-  },
 
-  bossRoar(): void {
-    const g = graph();
-    if (!g) return;
-    const { ctx, out, t } = g;
-    const o = ctx.createOscillator();
-    o.type = 'sawtooth';
-    o.frequency.setValueAtTime(70, t);
-    o.frequency.linearRampToValueAtTime(110, t + 0.6);
-    o.frequency.exponentialRampToValueAtTime(50, t + 1.4);
-    const lfo = ctx.createOscillator();
-    lfo.frequency.value = 18;
-    const lfoG = ctx.createGain();
-    lfoG.gain.value = 25;
-    lfo.connect(lfoG).connect(o.frequency);
-    const lp = ctx.createBiquadFilter();
-    lp.type = 'lowpass';
-    lp.frequency.setValueAtTime(400, t);
-    lp.frequency.linearRampToValueAtTime(1500, t + 0.6);
-    lp.frequency.exponentialRampToValueAtTime(200, t + 1.4);
-    const gn = ctx.createGain();
-    gn.gain.setValueAtTime(0.0001, t);
-    gn.gain.linearRampToValueAtTime(0.4, t + 0.15);
-    gn.gain.exponentialRampToValueAtTime(0.0001, t + 1.5);
-    o.connect(lp).connect(gn).connect(out);
-    o.start(t);
-    lfo.start(t);
-    o.stop(t + 1.6);
-    lfo.stop(t + 1.6);
-  },
 
-  bossDefeated(): void {
-    const g = graph();
-    if (!g) return;
-    const { ctx, out, t } = g;
-    noise(ctx, out, t, 'lowpass', 4000, 100, 1.2, 0.4);
-    tone(ctx, out, t, 'sawtooth', 200, 30, 1.0, 0.3);
-    for (let i = 0; i < 6; i++) tone(ctx, out, t + 0.1 + i * 0.06, 'sine', 800 + i * 200, 2000 + i * 300, 0.25, 0.12);
-  },
 
   zoneChime(): void {
     const g = graph();

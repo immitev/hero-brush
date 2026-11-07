@@ -1,8 +1,9 @@
 import * as THREE from 'three';
+import { CELLS_PER_TOOTH, CELLS_U, CELLS_V, SURFACES } from '../game/plaque';
 
 let gradient: THREE.DataTexture | null = null;
 
-/** Soft 4-step gradient map that gives MeshToonMaterial a gentle cel-shaded look. */
+/** Soft 4-step gradient map that gives MeshToonMaterial a gentle cel-shaded look (heroes). */
 export function toonGradient(): THREE.DataTexture {
   if (gradient) return gradient;
   const data = new Uint8Array([120, 175, 225, 255]);
@@ -23,105 +24,110 @@ export function glow(color: THREE.ColorRepresentation, intensity = 2.2): THREE.M
   return new THREE.MeshBasicMaterial({ color: c, toneMapped: false });
 }
 
+/** Per-tooth plaque texture: 8 cells wide × 12 rows (outer 0–3, inner 4–7, chewing 8–11), 255 = clean. */
+export function createPlaqueTexture(): THREE.DataTexture {
+  const data = new Uint8Array(CELLS_PER_TOOTH);
+  const tex = new THREE.DataTexture(data, CELLS_U, CELLS_V * SURFACES.length, THREE.RedFormat, THREE.UnsignedByteType);
+  tex.minFilter = THREE.LinearFilter;
+  tex.magFilter = THREE.LinearFilter;
+  tex.wrapS = THREE.ClampToEdgeWrapping;
+  tex.wrapT = THREE.ClampToEdgeWrapping;
+  tex.generateMipmaps = false;
+  tex.needsUpdate = true;
+  return tex;
+}
+
+const PLAQUE_GLSL_COMMON = `
+  uniform sampler2D uPlaque;
+  uniform vec3 uToothSize;
+  uniform float uFlipU;
+  uniform vec3 uTint;
+  uniform float uPlaqueStrength;
+  varying vec3 vObjPos;
+  varying vec3 vObjNormal;
+
+  // cleanliness 0..1 at this fragment, and the gum→edge coordinate of wall surfaces
+  vec2 hbPlaque() {
+    vec3 n = normalize(vObjNormal);
+    float u = vObjPos.x / uToothSize.x + 0.5;
+    u = mix(u, 1.0 - u, uFlipU);
+    float band;
+    float v;
+    float gumV = 0.0;
+    if (n.y > 0.55) {
+      band = 2.0;
+      v = vObjPos.z / uToothSize.z + 0.5;
+    } else {
+      band = n.z >= 0.0 ? 0.0 : 1.0;
+      v = vObjPos.y / uToothSize.y + 0.5;
+      gumV = 1.0 - v;
+    }
+    v = clamp(v, 0.0, 1.0);
+    float ty = (band * 4.0 + 0.5 + v * 3.0) / 12.0;
+    float clean = texture2D(uPlaque, vec2(clamp(u, 0.03, 0.97), ty)).r;
+    return vec2(clean, gumV);
+  }
+`;
+
 /**
- * Tooth material: cel-shaded ivory with a `cleanliness` pair (outer/inner
- * surface). Dirty teeth are only lightly warm-tinted with a few soft, pale
- * plaque spots; clean teeth are bright white with gloss and twinkling sparkles.
- * Local +Z must point outward (lip/cheek side) and local +Y towards the chewing
- * surface.
+ * Enamel: physically based (clearcoat sheen, slight ivory variation, a touch of
+ * translucency at the incisal edge) with a thin yellowish plaque film driven by
+ * the per-cell plaque texture. Local +X runs along the row, +Y towards the
+ * chewing edge, +Z towards the lips/cheeks.
  */
-export class ToothMaterial extends THREE.MeshToonMaterial {
-  readonly uniforms = {
-    uCleanOuter: { value: 0 },
-    uCleanInner: { value: 0 },
-    uTime: { value: 0 },
-    uSpotColor: { value: new THREE.Color('#e6d6a3') },
-    uDirtyColor: { value: new THREE.Color('#f6efd8') },
-    uCleanColor: { value: new THREE.Color('#f2f4f9') },
+export class EnamelMaterial extends THREE.MeshPhysicalMaterial {
+  readonly uniforms: {
+    uPlaque: { value: THREE.DataTexture };
+    uToothSize: { value: THREE.Vector3 };
+    uFlipU: { value: number };
+    uTint: { value: THREE.Color };
+    uPlaqueStrength: { value: number };
   };
 
-  constructor() {
-    super({ color: '#ffffff', gradientMap: toonGradient() });
+  constructor(plaque: THREE.DataTexture, size: [number, number, number], flipU: boolean, tint: THREE.ColorRepresentation, highQuality: boolean) {
+    super({
+      color: '#ece4d2',
+      roughness: 0.38,
+      metalness: 0,
+      clearcoat: highQuality ? 0.35 : 0,
+      clearcoatRoughness: 0.3,
+      envMapIntensity: highQuality ? 0.35 : 0.25,
+    });
+    this.uniforms = {
+      uPlaque: { value: plaque },
+      uToothSize: { value: new THREE.Vector3(size[0], size[1], size[2]) },
+      uFlipU: { value: flipU ? 1 : 0 },
+      uTint: { value: new THREE.Color(tint) },
+      uPlaqueStrength: { value: 1 },
+    };
     this.onBeforeCompile = (shader) => {
       Object.assign(shader.uniforms, this.uniforms);
       shader.vertexShader = shader.vertexShader
-        .replace(
-          '#include <common>',
-          `#include <common>
-           varying vec3 vObjPos;
-           varying vec3 vObjNormal;
-           varying vec3 vWorldPos;
-           varying vec3 vWorldNormal;`,
-        )
-        .replace(
-          '#include <begin_vertex>',
-          `#include <begin_vertex>
-           vObjPos = position;
-           vObjNormal = normal;
-           vWorldPos = (modelMatrix * vec4(position, 1.0)).xyz;
-           vWorldNormal = normalize(mat3(modelMatrix) * normal);`,
-        );
+        .replace('#include <common>', `#include <common>\n varying vec3 vObjPos;\n varying vec3 vObjNormal;`)
+        .replace('#include <begin_vertex>', `#include <begin_vertex>\n vObjPos = position;\n vObjNormal = normal;`);
       shader.fragmentShader = shader.fragmentShader
-        .replace(
-          '#include <common>',
-          `#include <common>
-           uniform float uCleanOuter;
-           uniform float uCleanInner;
-           uniform float uTime;
-           uniform vec3 uSpotColor;
-           uniform vec3 uDirtyColor;
-           uniform vec3 uCleanColor;
-           varying vec3 vObjPos;
-           varying vec3 vObjNormal;
-           varying vec3 vWorldPos;
-           varying vec3 vWorldNormal;
-           float hbClean;
-           float hb_hash(vec3 p) {
-             p = fract(p * 0.3183099 + vec3(0.1, 0.17, 0.13));
-             p *= 17.0;
-             return fract(p.x * p.y * p.z * (p.x + p.y + p.z));
-           }
-           float hb_noise(vec3 p) {
-             vec3 i = floor(p);
-             vec3 f = fract(p);
-             f = f * f * (3.0 - 2.0 * f);
-             return mix(
-               mix(mix(hb_hash(i), hb_hash(i + vec3(1,0,0)), f.x), mix(hb_hash(i + vec3(0,1,0)), hb_hash(i + vec3(1,1,0)), f.x), f.y),
-               mix(mix(hb_hash(i + vec3(0,0,1)), hb_hash(i + vec3(1,0,1)), f.x), mix(hb_hash(i + vec3(0,1,1)), hb_hash(i + vec3(1,1,1)), f.x), f.y),
-               f.z);
-           }`,
-        )
+        .replace('#include <common>', `#include <common>\n${PLAQUE_GLSL_COMMON}`)
         .replace(
           '#include <color_fragment>',
           `#include <color_fragment>
-           float outerMask = smoothstep(-0.2, 0.3, vObjNormal.z);
-           hbClean = mix(uCleanInner, uCleanOuter, outerMask);
-           // a few soft, round plaque spots that fade away as the tooth gets cleaner
-           float n = hb_noise(vObjPos * 4.5 + 3.0);
-           float th = 0.64 + hbClean * 0.5;
-           float spots = smoothstep(th, th + 0.14, n) * 0.55;
-           vec3 base = mix(uDirtyColor, uCleanColor, smoothstep(0.0, 1.0, hbClean));
-           base = mix(base, uSpotColor, spots);
-           diffuseColor.rgb *= base;`,
+           vec2 pq = hbPlaque();
+           float film = (1.0 - pq.x) * uPlaqueStrength;
+           film *= 0.5 + 0.5 * smoothstep(0.0, 0.35, pq.y + 0.25) ;
+           film = clamp(film * (1.0 + 0.7 * smoothstep(0.55, 1.0, pq.y)), 0.0, 1.0);
+           vec3 enamel = diffuseColor.rgb * uTint;
+           // slightly cooler, more translucent-looking incisal edge
+           float edge = smoothstep(0.72, 1.0, 1.0 - pq.y) * step(0.5, 1.0 - step(0.55, normalize(vObjNormal).y));
+           enamel = mix(enamel, vec3(0.86, 0.9, 0.94), edge * 0.28);
+           vec3 plaqueColor = vec3(0.89, 0.83, 0.58);
+           diffuseColor.rgb = mix(enamel, plaqueColor, film * 0.62);`,
         )
         .replace(
-          '#include <emissivemap_fragment>',
-          `#include <emissivemap_fragment>
-           // glossy highlight from a fixed WORLD light (top-front), so undersides and
-           // chewing surfaces seen from below do not light up when the camera looks up
-           vec3 hbN = normalize(vWorldNormal);
-           vec3 hbViewW = normalize(cameraPosition - vWorldPos);
-           vec3 hbHalf = normalize(hbViewW + normalize(vec3(0.4, 1.0, 0.7)));
-           float hbSpec = pow(max(dot(hbN, hbHalf), 0.0), 48.0);
-           float hbRim = pow(1.0 - max(dot(hbN, hbViewW), 0.0), 3.0);
-           float gloss = mix(0.3, 1.0, hbClean);
-           totalEmissiveRadiance += vec3(hbSpec * 0.28 * gloss + hbRim * 0.04 * gloss);
-           float tw = hb_hash(floor(vObjPos * 11.0) + floor(uTime * 3.0));
-           float sp = step(0.982, tw) * smoothstep(0.8, 1.0, hbClean);
-           totalEmissiveRadiance += vec3(1.6, 1.6, 1.8) * sp;`,
+          '#include <roughnessmap_fragment>',
+          `#include <roughnessmap_fragment>
+           roughnessFactor = clamp(roughnessFactor + film * 0.4, 0.0, 1.0);`,
         );
     };
-    this.customProgramCacheKey = () => 'hero-brush-tooth-v5';
+    this.customProgramCacheKey = () => `hero-brush-enamel-${highQuality ? 'hq' : 'lq'}`;
   }
 }
 

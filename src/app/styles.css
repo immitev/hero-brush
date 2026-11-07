@@ -454,9 +454,6 @@ input:focus-visible {
   text-shadow: 0 6px 0 rgba(0, 0, 0, 0.35), 0 12px 30px rgba(0, 0, 0, 0.5);
   letter-spacing: -2px;
 }
-.clock.boss {
-  color: #e9b3ff;
-}
 .clock.urgent {
   color: var(--accent);
   animation: pulse 0.5s ease-in-out infinite;
@@ -479,34 +476,6 @@ input:focus-visible {
   background: var(--accent);
   border-color: #fff;
   transform: scale(1.25);
-}
-.boss-bar {
-  align-self: center;
-  width: min(92%, 420px);
-  background: rgba(0, 0, 0, 0.45);
-  border-radius: 14px;
-  padding: 8px 12px;
-  border: 2px solid rgba(255, 255, 255, 0.2);
-  animation: popin 0.4s ease;
-}
-.boss-bar-label {
-  font-weight: 900;
-  color: #e9b3ff;
-  text-transform: uppercase;
-  letter-spacing: 1.5px;
-  font-size: 13px;
-  margin-bottom: 4px;
-}
-.boss-bar-track {
-  height: 14px;
-  border-radius: 7px;
-  background: rgba(255, 255, 255, 0.15);
-  overflow: hidden;
-}
-.boss-bar-fill {
-  height: 100%;
-  background: linear-gradient(90deg, #c084fc, #7c3aed);
-  transition: width 0.15s linear;
 }
 
 /* overlays */
@@ -864,4 +833,126 @@ input:focus-visible {
 }
 .segmented.no-caps button {
   text-transform: none;
+}
+
+/* ---------- technique coaching ---------- */
+.coach {
+  align-self: center;
+  display: flex;
+  align-items: center;
+  gap: 12px;
+  width: min(96%, 460px);
+  background: rgba(20, 10, 50, 0.6);
+  border: 2px solid rgba(255, 255, 255, 0.18);
+  border-radius: 18px;
+  padding: 8px 14px 8px 8px;
+  animation: popin 0.35s ease;
+  backdrop-filter: blur(6px);
+  -webkit-backdrop-filter: blur(6px);
+}
+.coach-text {
+  font-weight: 900;
+  font-size: clamp(15px, 4.2vw, 20px);
+  line-height: 1.2;
+  color: #fff;
+  text-shadow: 0 2px 0 rgba(0, 0, 0, 0.3);
+}
+.motion-icon {
+  flex: none;
+  filter: drop-shadow(0 3px 6px rgba(0, 0, 0, 0.35));
+}
+.motion-spin {
+  animation: motion-spin 1s linear infinite;
+}
+@keyframes motion-spin {
+  to {
+    transform: rotate(360deg);
+  }
+}
+.motion-flick-down {
+  animation: motion-flick-down 0.9s ease-in-out infinite;
+}
+.motion-flick-up {
+  animation: motion-flick-up 0.9s ease-in-out infinite;
+}
+@keyframes motion-flick-down {
+  0%,
+  100% {
+    transform: translateY(-4px);
+  }
+  60% {
+    transform: translateY(10px);
+  }
+}
+@keyframes motion-flick-up {
+  0%,
+  100% {
+    transform: translateY(4px);
+  }
+  60% {
+    transform: translateY(-10px);
+  }
+}
+.motion-scrub {
+  animation: motion-scrub 0.5s ease-in-out infinite alternate;
+}
+@keyframes motion-scrub {
+  from {
+    transform: translateX(-7px);
+  }
+  to {
+    transform: translateX(7px);
+  }
+}
+.motion-tongue {
+  animation: motion-tongue 1.3s ease-in-out infinite;
+}
+@keyframes motion-tongue {
+  0%,
+  100% {
+    transform: translateY(-10px);
+  }
+  70% {
+    transform: translateY(14px);
+  }
+}
+.mouthmap-tongue {
+  fill: rgba(232, 74, 111, 0.55);
+  stroke: rgba(255, 255, 255, 0.25);
+  stroke-width: 2;
+  transition: fill 0.3s;
+}
+.mouthmap-tongue.done {
+  fill: #ffffff;
+}
+.mouthmap-tongue.active {
+  fill: var(--accent);
+  animation: blink 0.8s ease-in-out infinite alternate;
+}
+.clean-bar {
+  width: min(70%, 320px);
+  height: 10px;
+  border-radius: 5px;
+  background: rgba(0, 0, 0, 0.35);
+  border: 2px solid rgba(255, 255, 255, 0.25);
+  overflow: hidden;
+}
+.clean-bar-fill {
+  height: 100%;
+  background: linear-gradient(90deg, #9ff0dc, #ffffff);
+  transition: width 0.3s linear;
+}
+.rinse-why {
+  display: block;
+  opacity: 0.8;
+  font-weight: 700;
+}
+@media (prefers-reduced-motion: reduce) {
+  .motion-spin,
+  .motion-flick-down,
+  .motion-flick-up,
+  .motion-scrub,
+  .motion-tongue {
+    animation: none;
+  }
 }

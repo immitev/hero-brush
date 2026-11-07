@@ -11,7 +11,7 @@ import {
   totalStars,
   MIN_RECORD_SECONDS,
 } from './scoring';
-import { SESSION_SECONDS } from './zones';
+import { SESSION_SECONDS } from './segments';
 import { DEFAULT_SETTINGS, type Settings, addSession, loadSessions, loadSettings, saveSettings, clearAllData } from '../storage/db';
 import type { Phase } from './runtime';
 
@@ -20,13 +20,12 @@ export type Screen = 'hub' | 'select' | 'play' | 'parent';
 export interface Hud {
   phase: Phase;
   timeLeft: number;
-  zoneIndex: number;
-  bossActive: boolean;
-  bossHealth: number;
+  segmentIndex: number;
+  /** Overall cleanliness 0..1. */
+  clean: number;
   /** 3, 2, 1 or 0 for "GO!". */
   countdown: number;
   paused: boolean;
-  kills: number;
 }
 
 export interface SessionResult {
@@ -94,7 +93,7 @@ export const useStore = create<AppState>((set, get) => ({
   streak: EMPTY_STREAK,
   totalStars: 0,
   lastResult: null,
-  hud: { phase: 'idle', timeLeft: SESSION_SECONDS, zoneIndex: 0, bossActive: false, bossHealth: 1, countdown: 3, paused: false, kills: 0 },
+  hud: { phase: 'idle', timeLeft: SESSION_SECONDS, segmentIndex: 0, clean: 0, countdown: 3, paused: false },
   speed: readSpeed(),
   forcedLowQuality: false,
 

@@ -2,7 +2,7 @@ import { useMemo, useState } from 'react';
 import { setVolumes } from '../../audio/engine';
 import { setVoiceLevel, setVoiceMuted } from '../../audio/voice';
 import { useStore } from '../../game/store';
-import { formatClock } from '../../game/zones';
+import { formatClock } from '../../game/segments';
 import { LANGS, LANG_NAME, useT } from '../../i18n';
 import { StarIcon } from '../components/Icons';
 import { Gate } from './ParentGate';

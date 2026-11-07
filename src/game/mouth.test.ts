@@ -1,35 +1,37 @@
 import { describe, expect, it } from 'vitest';
-import { TEETH, perchOn, teethForZone, zonesForTooth } from './mouth';
+import { TEETH, dot, gumSign, surfaceCenter, surfaceNormal, tooth } from './mouth';
 
 describe('mouth layout', () => {
-  it('has 24 teeth, 12 per row, left to right', () => {
+  it('has 24 teeth, 12 per row, left to right, with the right kinds', () => {
     expect(TEETH).toHaveLength(24);
     const upper = TEETH.filter((t) => t.row === 'upper');
     expect(upper).toHaveLength(12);
     for (let i = 1; i < upper.length; i++) expect(upper[i].pos[0]).toBeGreaterThan(upper[i - 1].pos[0]);
-    expect(upper[0].kind).toBe('molar');
-    expect(upper[5].kind).toBe('incisor');
+    expect(upper.map((t) => t.kind)).toEqual([
+      'molar', 'molar', 'premolar', 'canine', 'incisor', 'incisor', 'incisor', 'incisor', 'canine', 'premolar', 'molar', 'molar',
+    ]);
+    expect(tooth('lower', 3).row).toBe('lower');
+    expect(tooth('lower', 3).col).toBe(3);
   });
 
-  it('assigns the right teeth to each zone', () => {
-    expect(teethForZone(0).every((t) => t.row === 'upper' && t.col < 6)).toBe(true);
-    expect(teethForZone(3).every((t) => t.row === 'lower' && t.col >= 6)).toBe(true);
-    expect(teethForZone(4)).toHaveLength(12);
-    expect(teethForZone(5).every((t) => t.row === 'lower')).toBe(true);
+  it('tangent runs left to right and is perpendicular to outward', () => {
+    for (const t of TEETH) {
+      expect(Math.abs(dot(t.tangent, t.outward))).toBeLessThan(1e-9);
+      expect(dot(t.tangent, [1, 0, 0])).toBeGreaterThan(0);
+    }
   });
 
-  it('maps each tooth to its outside and inside zones', () => {
-    const t = TEETH.find((x) => x.row === 'lower' && x.col === 8)!;
-    expect(zonesForTooth(t)).toEqual({ outside: 3, inside: 5 });
-  });
-
-  it('perches monsters outside the tooth along its outward normal', () => {
-    const t = TEETH[0];
-    const p = perchOn(t, 'outside');
-    const dx = p.pos[0] - t.pos[0];
-    const dz = p.pos[2] - t.pos[2];
-    expect(dx * t.outward[0] + dz * t.outward[2]).toBeGreaterThan(0);
-    const chew = perchOn(t, 'chewing');
-    expect(chew.pos[1]).toBeLessThan(t.pos[1]); // upper teeth chew downwards
+  it('places surface centres on the right sides of the crown', () => {
+    const t = tooth('upper', 5);
+    const outer = surfaceCenter(t, 'outer');
+    const inner = surfaceCenter(t, 'inner');
+    const chew = surfaceCenter(t, 'chewing');
+    expect(outer[2]).toBeGreaterThan(inner[2]); // outer face is towards the lips (+z)
+    expect(chew[1]).toBeLessThan(t.pos[1]); // upper teeth chew downwards
+    expect(surfaceNormal(t, 'chewing')).toEqual([0, -1, 0]);
+    expect(gumSign(t)).toBe(1);
+    const l = tooth('lower', 5);
+    expect(surfaceCenter(l, 'chewing')[1]).toBeGreaterThan(l.pos[1]);
+    expect(gumSign(l)).toBe(-1);
   });
 });

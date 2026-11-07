@@ -1,20 +1,29 @@
-import { ZONES } from '../../game/zones';
+import { SEGMENTS } from '../../game/segments';
 import { type MessageKey, useT } from '../../i18n';
 
-/** Mini mouth map: six regions, the active one pulses. */
-export function MouthMap({ zoneIndex, size = 96 }: { zoneIndex: number; size?: number }) {
+/**
+ * Mini mouth map: one region per segment (outer quadrants, inner back / front
+ * arcs, the chewing ring and the tongue). The active one pulses; done ones
+ * turn white. Drawn like a mirror: the left of the map is the child's left.
+ */
+const PATHS: Record<string, string> = {
+  'upper-outer-left': 'M14 62 A46 46 0 0 1 60 16',
+  'upper-outer-right': 'M60 16 A46 46 0 0 1 106 62',
+  'lower-outer-left': 'M14 62 A46 46 0 0 0 60 108',
+  'lower-outer-right': 'M60 108 A46 46 0 0 0 106 62',
+  'upper-inner-back': 'M32 62 A28 28 0 0 1 44 40 M88 62 A28 28 0 0 0 76 40',
+  'upper-inner-front': 'M44 40 A28 28 0 0 1 76 40',
+  'lower-inner-back': 'M32 62 A28 28 0 0 0 44 84 M88 62 A28 28 0 0 1 76 84',
+  'lower-inner-front': 'M44 84 A28 28 0 0 0 76 84',
+  chewing: 'M23 62 A37 37 0 0 1 97 62 M23 62 A37 37 0 0 0 97 62',
+};
+
+export function MouthMap({ segmentIndex, size = 96 }: { segmentIndex: number; size?: number }) {
   const { t } = useT();
-  // path for each zone id (upper/lower outer halves + inner arcs)
-  const paths: Record<string, string> = {
-    'upper-left-out': 'M14 62 A46 46 0 0 1 60 16',
-    'upper-right-out': 'M60 16 A46 46 0 0 1 106 62',
-    'lower-left-out': 'M14 62 A46 46 0 0 0 60 108',
-    'lower-right-out': 'M60 108 A46 46 0 0 0 106 62',
-    'upper-in': 'M32 62 A28 28 0 0 1 88 62',
-    'lower-in': 'M32 62 A28 28 0 0 0 88 62',
-  };
+  const stateOf = (i: number) => (i < segmentIndex ? 'done' : i === segmentIndex ? 'active' : 'todo');
+  const tongueState = stateOf(SEGMENTS.length - 1);
   return (
-    <svg width={size} height={size} viewBox="0 0 120 124" className="mouthmap" aria-label={t('play.mouthMap', { zone: t(`zone.${ZONES[zoneIndex].id}` as MessageKey) })}>
+    <svg width={size} height={size} viewBox="0 0 120 124" className="mouthmap" aria-label={t('play.mouthMap', { zone: t(`seg.${SEGMENTS[segmentIndex].id}` as MessageKey) })}>
       <defs>
         <filter id="mm-glow" x="-30%" y="-30%" width="160%" height="160%">
           <feGaussianBlur stdDeviation="2.5" result="b" />
@@ -25,22 +34,22 @@ export function MouthMap({ zoneIndex, size = 96 }: { zoneIndex: number; size?: n
         </filter>
       </defs>
       <ellipse cx="60" cy="62" rx="54" ry="52" fill="rgba(0,0,0,0.35)" stroke="rgba(255,255,255,0.25)" strokeWidth="2" />
-      {ZONES.map((z) => {
-        const state = z.index < zoneIndex ? 'done' : z.index === zoneIndex ? 'active' : 'todo';
+      {SEGMENTS.filter((s) => s.surface !== 'tongue').map((s) => {
+        const state = stateOf(s.index);
         return (
           <path
-            key={z.id}
-            d={paths[z.id]}
+            key={s.id}
+            d={PATHS[s.id]}
             className={`mouthmap-zone ${state}`}
             fill="none"
-            strokeWidth={z.surface === 'inside' ? 7 : 9}
+            strokeWidth={s.surface === 'outer' ? 9 : s.surface === 'chewing' ? 4 : 7}
+            strokeDasharray={s.surface === 'chewing' ? '4 3' : undefined}
             strokeLinecap="round"
             filter={state === 'active' ? 'url(#mm-glow)' : undefined}
           />
         );
       })}
-      {/* tongue */}
-      <ellipse cx="60" cy="74" rx="14" ry="9" fill="#e84a6f" opacity="0.8" />
+      <ellipse cx="60" cy="66" rx="13" ry="8" className={`mouthmap-tongue ${tongueState}`} filter={tongueState === 'active' ? 'url(#mm-glow)' : undefined} />
     </svg>
   );
 }
