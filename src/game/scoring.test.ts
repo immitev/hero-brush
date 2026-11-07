@@ -5,9 +5,12 @@ import {
   addDays,
   computeStars,
   computeStreak,
+  countingSessions,
   dateKey,
   isSuitUnlocked,
+  sessionTimeInfo,
   slotForDate,
+  starsForHero,
   totalStars,
 } from './scoring';
 
@@ -60,6 +63,12 @@ describe('dates and slots', () => {
     expect(addDays('2026-02-28', 1)).toBe('2026-03-01');
     expect(addDays('2026-01-01', -1)).toBe('2025-12-31');
   });
+  it('derives slot and day from the session START time, even across noon or midnight', () => {
+    // started 11:59, finished 12:01 → still a morning session
+    expect(sessionTimeInfo(new Date(2026, 10, 7, 11, 59).getTime())).toEqual({ dateKey: '2026-11-07', slot: 'morning' });
+    // started 23:59 on the 6th → counts for the 6th
+    expect(sessionTimeInfo(new Date(2026, 10, 6, 23, 59).getTime())).toEqual({ dateKey: '2026-11-06', slot: 'evening' });
+  });
 });
 
 describe('streak', () => {
@@ -70,6 +79,7 @@ describe('streak', () => {
     expect(s.current).toBe(0);
     expect(s.best).toBe(0);
     expect(s.brushedToday).toBe(false);
+    expect(s.todaySlots).toEqual([]);
   });
 
   it('counts consecutive days ending today', () => {
@@ -80,6 +90,7 @@ describe('streak', () => {
     expect(s.current).toBe(3);
     expect(s.best).toBe(3);
     expect(s.brushedToday).toBe(true);
+    expect(s.todaySlots).toEqual(['morning']);
   });
 
   it('keeps the streak alive if today is not brushed yet but yesterday was', () => {
@@ -117,6 +128,38 @@ describe('streak', () => {
   });
 });
 
+describe('star farming protection', () => {
+  it('counts only the best session per day and slot', () => {
+    const records = [
+      rec({ dateKey: '2026-11-07', slot: 'morning', stars: 1, elapsed: 40, startedAt: 1 }),
+      rec({ dateKey: '2026-11-07', slot: 'morning', stars: 2, elapsed: 120, startedAt: 2 }),
+      rec({ dateKey: '2026-11-07', slot: 'morning', stars: 2, elapsed: 120, startedAt: 3, heroId: 'batman' }),
+      rec({ dateKey: '2026-11-07', slot: 'evening', stars: 3, startedAt: 4 }),
+      rec({ dateKey: '2026-11-06', slot: 'evening', stars: 1, elapsed: 35, startedAt: 5 }),
+    ];
+    const counting = countingSessions(records);
+    expect(counting).toHaveLength(3);
+    expect(totalStars(records)).toBe(6);
+    // tie on stars + elapsed → the latest session wins (batman)
+    expect(starsForHero(records, 'batman')).toBe(2);
+    expect(starsForHero(records, 'ironman')).toBe(4);
+  });
+
+  it('does not unlock suits by repeating the same slot', () => {
+    const farmed = Array.from({ length: 10 }, (_, i) =>
+      rec({ dateKey: '2026-11-07', slot: 'morning', heroId: 'batman', stars: 2, startedAt: i }),
+    );
+    expect(isSuitUnlocked(farmed, 'batman', 1)).toBe(false);
+    const legit = [
+      rec({ dateKey: '2026-11-05', slot: 'morning', heroId: 'batman', stars: 2 }),
+      rec({ dateKey: '2026-11-05', slot: 'evening', heroId: 'batman', stars: 3 }),
+      rec({ dateKey: '2026-11-06', slot: 'morning', heroId: 'batman', stars: 1 }),
+    ];
+    expect(isSuitUnlocked(legit, 'batman', 1)).toBe(true);
+    expect(SUIT_UNLOCK_STARS).toBe(6);
+  });
+});
+
 describe('unlocks', () => {
   it('unlocks the second suit after enough stars with that hero', () => {
     const records = [
@@ -127,7 +170,6 @@ describe('unlocks', () => {
     expect(isSuitUnlocked(records, 'batman', 0)).toBe(true);
     expect(isSuitUnlocked(records, 'batman', 1)).toBe(false);
     expect(isSuitUnlocked([...records, rec({ dateKey: '2026-11-04', heroId: 'batman', stars: 1 })], 'batman', 1)).toBe(true);
-    expect(SUIT_UNLOCK_STARS).toBe(6);
     expect(totalStars(records)).toBe(8);
   });
 });

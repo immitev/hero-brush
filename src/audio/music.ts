@@ -103,6 +103,22 @@ class Music {
     this.out = null;
   }
 
+  /**
+   * Re-aligns the sequencer so that musical time equals `seconds` from now on
+   * (used at zone/boss transitions so the boss build-up stays with the boss).
+   * Small drift is ignored; larger drift skips/rewinds steps.
+   */
+  syncTo(seconds: number, tolerance = 0.12): void {
+    const ctx = getContext();
+    if (!ctx || !this.running) return;
+    const musicalNow = ctx.currentTime - this.startTime;
+    const drift = musicalNow - seconds;
+    if (Math.abs(drift) < tolerance) return;
+    this.startTime = ctx.currentTime - seconds;
+    // continue scheduling from the next step that has not sounded yet
+    this.nextStep = Math.max(0, Math.ceil(seconds / STEP));
+  }
+
   private schedule(): void {
     const ctx = getContext();
     if (!ctx || !this.running || !this.out) return;

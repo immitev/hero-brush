@@ -1,6 +1,9 @@
 import { useRegisterSW } from 'virtual:pwa-register/react';
+import { useStore } from '../../game/store';
 
+/** Stays mounted (one SW registration) but only shows outside the game screens. */
 export function UpdatePrompt() {
+  const screen = useStore((s) => s.screen);
   const {
     needRefresh: [needRefresh, setNeedRefresh],
     updateServiceWorker,
@@ -10,6 +13,7 @@ export function UpdatePrompt() {
     },
   });
   if (!needRefresh) return null;
+  if (screen !== 'hub' && screen !== 'parent') return null;
   return (
     <div className="toast" role="status">
       <span>New version ready.</span>

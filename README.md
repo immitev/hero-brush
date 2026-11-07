@@ -54,9 +54,12 @@ Add `?fast=1` to the URL to run the game clock at 10x (a full session takes 12 s
 - **Audio**: procedural 2-minute synth track at 120 bpm with a boss build-up, procedural SFX,
   speech-synthesis voice lines per hero.
 - **Progression**: 0-3 stars per session (30 s = 1, full session = 2, morning + evening = 3),
-  day streak, session history in IndexedDB (Dexie), suit unlocks.
-- **Parent area** behind a multiplication gate: summary, history table, music/SFX volume, voice
-  mute, graphics quality (low/high), delete all data.
+  day streak, session history in IndexedDB (Dexie), suit unlocks. Only the best session per
+  day and slot (morning/evening, taken from the session's start time) counts towards totals and
+  unlocks, so repeating a session does not farm stars.
+- **Parent area** behind a press-and-hold (3 s) + arithmetic gate (new question after every
+  miss, 60 s lockout after three misses): summary, history table, music/SFX volume, voice mute,
+  graphics quality (low/high), delete all data.
 - **PWA**: manifest, generated icons (incl. maskable), Workbox precache of all assets for offline
   play, in-app "new version" prompt.
 - **Performance**: quality tier (low disables post-processing and reduces particles), dynamic

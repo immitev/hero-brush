@@ -2,12 +2,12 @@ import { create } from 'zustand';
 import { HEROES } from '../heroes';
 import {
   type SessionRecord,
+  type Slot,
   type StreakInfo,
   computeStars,
   computeStreak,
-  dateKey,
   isSuitUnlocked,
-  slotForDate,
+  sessionTimeInfo,
   totalStars,
   MIN_RECORD_SECONDS,
 } from './scoring';
@@ -23,6 +23,7 @@ export interface Hud {
   zoneIndex: number;
   bossActive: boolean;
   bossHealth: number;
+  /** 3, 2, 1 or 0 for "GO!". */
   countdown: number;
   paused: boolean;
   kills: number;
@@ -33,6 +34,10 @@ export interface SessionResult {
   elapsed: number;
   completed: boolean;
   heroId: string;
+  /** Slot the session started in. */
+  slot: Slot;
+  /** Whether the other slot of the same day was already completed. */
+  otherSlotDone: boolean;
   unlockedSuit: { heroId: string; suitId: string; suitName: string } | null;
   streak: StreakInfo;
 }
@@ -59,8 +64,12 @@ export interface AppState {
   updateSettings: (patch: Partial<Settings>) => void;
   setHud: (patch: Partial<Hud>) => void;
   setForcedLowQuality: (v: boolean) => void;
-  /** Records a finished (or abandoned) session and returns its result. */
-  finishSession: (elapsed: number, completed: boolean) => Promise<SessionResult>;
+  /** Clears the previous result; call when a new session starts. */
+  beginSession: () => void;
+  /** Recomputes streak / brushedToday against the current date. */
+  refreshStreak: () => void;
+  /** Records a finished (or abandoned) session that started at `startedAt` and returns its result. */
+  finishSession: (elapsed: number, completed: boolean, startedAt: number) => Promise<SessionResult>;
   resetAllData: () => Promise<void>;
   effectiveQuality: () => 'low' | 'high';
 }
@@ -74,7 +83,7 @@ function readSpeed(): number {
   return n === 1 ? 10 : Math.min(60, n);
 }
 
-const EMPTY_STREAK: StreakInfo = { current: 0, best: 0, perfectDays: 0, brushedToday: false };
+const EMPTY_STREAK: StreakInfo = { current: 0, best: 0, perfectDays: 0, brushedToday: false, todaySlots: [] };
 
 export const useStore = create<AppState>((set, get) => ({
   ready: false,
@@ -123,12 +132,15 @@ export const useStore = create<AppState>((set, get) => ({
 
   setForcedLowQuality: (v) => set({ forcedLowQuality: v }),
 
-  finishSession: async (elapsed, completed) => {
+  beginSession: () => set({ lastResult: null }),
+
+  refreshStreak: () => set((s) => ({ streak: computeStreak(s.sessions) })),
+
+  finishSession: async (elapsed, completed, startedAt) => {
     const { heroId, settings, sessions } = get();
-    const now = new Date();
-    const key = dateKey(now);
-    const slot = slotForDate(now);
+    const { dateKey: key, slot } = sessionTimeInfo(startedAt);
     const sessionsToday = sessions.filter((s) => s.dateKey === key);
+    const otherSlotDone = sessionsToday.some((s) => s.completed && s.slot !== slot);
     const stars = computeStars({ elapsed, completed, slot, sessionsToday });
     const hero = HEROES.find((h) => h.id === heroId) ?? HEROES[0];
     const suitId = settings.suits[heroId] ?? hero.suits[0].id;
@@ -137,7 +149,7 @@ export const useStore = create<AppState>((set, get) => ({
     let next = sessions;
     if (elapsed >= MIN_RECORD_SECONDS) {
       const record: SessionRecord = {
-        startedAt: now.getTime() - elapsed * 1000,
+        startedAt,
         dateKey: key,
         slot,
         heroId,
@@ -156,7 +168,7 @@ export const useStore = create<AppState>((set, get) => ({
       }
     });
     const streak = computeStreak(next);
-    const result: SessionResult = { stars, elapsed, completed, heroId, unlockedSuit, streak };
+    const result: SessionResult = { stars, elapsed, completed, heroId, slot, otherSlotDone, unlockedSuit, streak };
     set({ sessions: next, streak, totalStars: totalStars(next), lastResult: result });
     return result;
   },

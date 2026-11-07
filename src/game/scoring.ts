@@ -6,8 +6,9 @@ export interface SessionRecord {
   id?: number;
   /** Epoch ms when the session started. */
   startedAt: number;
-  /** Local date key YYYY-MM-DD. */
+  /** Local date key YYYY-MM-DD (of the start time). */
   dateKey: string;
+  /** Slot of the start time. */
   slot: Slot;
   heroId: string;
   suitId: string;
@@ -35,6 +36,12 @@ export function dateKey(d: Date): string {
   return `${y}-${m}-${day}`;
 }
 
+/** Date key + slot for a session that STARTED at `startedAt` (epoch ms). */
+export function sessionTimeInfo(startedAt: number): { dateKey: string; slot: Slot } {
+  const d = new Date(startedAt);
+  return { dateKey: dateKey(d), slot: slotForDate(d) };
+}
+
 export function addDays(key: string, delta: number): string {
   const [y, m, d] = key.split('-').map(Number);
   const dt = new Date(y, m - 1, d + delta);
@@ -45,7 +52,7 @@ export interface StarInput {
   elapsed: number;
   completed: boolean;
   slot: Slot;
-  /** Completed sessions already recorded today (before this one). */
+  /** Sessions already recorded on the same day (before this one). */
   sessionsToday: Pick<SessionRecord, 'slot' | 'completed'>[];
 }
 
@@ -62,6 +69,26 @@ export function computeStars({ elapsed, completed, slot, sessionsToday }: StarIn
   return otherSlotDone ? 3 : 2;
 }
 
+function betterOf(a: SessionRecord, b: SessionRecord): SessionRecord {
+  if (b.stars !== a.stars) return b.stars > a.stars ? b : a;
+  if (b.elapsed !== a.elapsed) return b.elapsed > a.elapsed ? b : a;
+  return b.startedAt >= a.startedAt ? b : a;
+}
+
+/**
+ * Only the best session per (day, slot) counts towards totals and unlocks, so
+ * repeating sessions in the same slot cannot farm stars.
+ */
+export function countingSessions(records: readonly SessionRecord[]): SessionRecord[] {
+  const best = new Map<string, SessionRecord>();
+  for (const r of records) {
+    const key = `${r.dateKey}|${r.slot}`;
+    const cur = best.get(key);
+    best.set(key, cur ? betterOf(cur, r) : r);
+  }
+  return [...best.values()];
+}
+
 export interface StreakInfo {
   /** Consecutive days (ending today or yesterday) with a completed session. */
   current: number;
@@ -70,6 +97,8 @@ export interface StreakInfo {
   perfectDays: number;
   /** Whether today already has a completed session. */
   brushedToday: boolean;
+  /** Slots completed today. */
+  todaySlots: Slot[];
 }
 
 export function computeStreak(records: readonly SessionRecord[], today: Date = new Date()): StreakInfo {
@@ -105,15 +134,18 @@ export function computeStreak(records: readonly SessionRecord[], today: Date = n
     if (run > best) best = run;
     prev = k;
   }
-  return { current, best, perfectDays, brushedToday: days.has(todayKey) };
+  const todaySlots = [...(days.get(todayKey) ?? [])];
+  return { current, best, perfectDays, brushedToday: todaySlots.length > 0, todaySlots };
 }
 
 export function totalStars(records: readonly SessionRecord[]): number {
-  return records.reduce((sum, r) => sum + r.stars, 0);
+  return countingSessions(records).reduce((sum, r) => sum + r.stars, 0);
 }
 
 export function starsForHero(records: readonly SessionRecord[], heroId: string): number {
-  return records.filter((r) => r.heroId === heroId).reduce((sum, r) => sum + r.stars, 0);
+  return countingSessions(records)
+    .filter((r) => r.heroId === heroId)
+    .reduce((sum, r) => sum + r.stars, 0);
 }
 
 export function isSuitUnlocked(records: readonly SessionRecord[], heroId: string, suitIndex: number): boolean {

@@ -15,6 +15,7 @@ const up = new THREE.Vector3();
 const desired = new THREE.Vector3();
 const aimV = new THREE.Vector3();
 const lookTarget = new THREE.Vector3();
+const camDir = new THREE.Vector3();
 
 export function HeroRig({ hero, suit }: { hero: HeroPack; suit: Suit }) {
   const group = useRef<THREE.Group>(null);
@@ -61,12 +62,12 @@ export function HeroRig({ hero, suit }: { hero: HeroPack; suit: Suit }) {
       lookTarget.copy(aimPoint).sub(g.position);
       lookTarget.y = 0;
       const targetYaw = Math.atan2(lookTarget.x, lookTarget.z);
-      const camDir = cam.position.clone().sub(g.position);
+      camDir.copy(cam.position).sub(g.position);
       const camYaw = Math.atan2(camDir.x, camDir.z);
       const blended = lerpAngle(targetYaw, camYaw, 0.3);
       yaw.current = lerpAngle(yaw.current, blended, 1 - Math.exp(-dt * 5));
     } else {
-      const camDir = cam.position.clone().sub(g.position);
+      camDir.copy(cam.position).sub(g.position);
       yaw.current = lerpAngle(yaw.current, Math.atan2(camDir.x, camDir.z), 1 - Math.exp(-dt * 4));
     }
     g.rotation.y = yaw.current;

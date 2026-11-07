@@ -84,8 +84,9 @@ export function Particles({ quality }: { quality: 'low' | 'high' }) {
   };
 
   useFrame((state, dtRaw) => {
-    const dt = Math.min(dtRaw, 0.05);
     const rt = runtime;
+    if (rt.paused) return; // freeze everything (no spawning, no integration) while paused
+    const dt = Math.min(dtRaw, 0.05);
     // consume events
     for (const e of rt.events) {
       if (e.type === 'pop') {

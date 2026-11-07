@@ -1,5 +1,7 @@
+import { useEffect } from 'react';
 import { unlockAudio } from '../../audio/engine';
 import { sfx } from '../../audio/sfx';
+import { primeSpeech } from '../../audio/voice';
 import { useStore } from '../../game/store';
 import { useInstallPrompt } from '../../pwa/install';
 import { FlameIcon, StarIcon } from '../components/Icons';
@@ -8,9 +10,22 @@ export function Hub() {
   const go = useStore((s) => s.go);
   const totalStars = useStore((s) => s.totalStars);
   const streak = useStore((s) => s.streak);
+  const refreshStreak = useStore((s) => s.refreshStreak);
   const { canInstall, install } = useInstallPrompt();
 
+  // the date may have changed since the app was opened (left open overnight)
+  useEffect(() => {
+    refreshStreak();
+    const onVisibility = () => {
+      if (document.visibilityState === 'visible') refreshStreak();
+    };
+    document.addEventListener('visibilitychange', onVisibility);
+    return () => document.removeEventListener('visibilitychange', onVisibility);
+  }, [refreshStreak]);
+
   const onGo = async () => {
+    // iOS: speech and audio must be kicked off synchronously inside the tap
+    primeSpeech();
     await unlockAudio();
     sfx.go();
     go('select');

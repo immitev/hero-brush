@@ -678,6 +678,32 @@ input:focus-visible {
   color: var(--danger);
   font-weight: 700;
 }
+.hold-btn {
+  position: relative;
+  overflow: hidden;
+  width: 200px;
+  height: 64px;
+  border-radius: 999px;
+  background: rgba(255, 255, 255, 0.12);
+  border: 2px solid rgba(255, 255, 255, 0.3);
+  font-weight: 900;
+  font-size: 20px;
+  color: var(--fg);
+  touch-action: none;
+  user-select: none;
+  -webkit-user-select: none;
+}
+.hold-btn .hold-fill {
+  position: absolute;
+  inset: 0;
+  background: var(--accent);
+  transform-origin: left center;
+  transform: scaleX(0);
+  opacity: 0.85;
+}
+.hold-btn span:last-child {
+  position: relative;
+}
 .summary {
   display: grid;
   grid-template-columns: repeat(4, 1fr);

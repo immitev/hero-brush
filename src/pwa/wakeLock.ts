@@ -1,42 +1,98 @@
-/** Screen Wake Lock: keeps the phone awake while brushing. Silently no-ops where unsupported. */
-type WakeLockSentinelLike = { release: () => Promise<void>; addEventListener?: (t: string, cb: () => void) => void };
+/**
+ * Screen Wake Lock: keeps the phone awake while brushing. Silently no-ops where
+ * unsupported. Handles the race where `release()` is called while a `request()`
+ * is still pending: a sentinel that arrives after the lock is no longer wanted
+ * is released immediately.
+ */
+export type WakeLockSentinelLike = {
+  release: () => Promise<void>;
+  released?: boolean;
+  addEventListener?: (t: string, cb: () => void) => void;
+};
 
-let sentinel: WakeLockSentinelLike | null = null;
-let wanted = false;
-
-async function request(): Promise<void> {
-  const nav = navigator as Navigator & { wakeLock?: { request: (type: 'screen') => Promise<WakeLockSentinelLike> } };
-  if (!nav.wakeLock || sentinel) return;
-  try {
-    sentinel = await nav.wakeLock.request('screen');
-    sentinel.addEventListener?.('release', () => {
-      sentinel = null;
-    });
-  } catch {
-    sentinel = null;
-  }
+export interface WakeLockEnv {
+  request: ((type: 'screen') => Promise<WakeLockSentinelLike>) | null;
+  addVisibilityListener: (cb: () => void) => void;
+  removeVisibilityListener: (cb: () => void) => void;
+  isVisible: () => boolean;
 }
 
-function onVisibility(): void {
-  if (wanted && document.visibilityState === 'visible') void request();
+function browserEnv(): WakeLockEnv {
+  const nav = typeof navigator !== 'undefined' ? (navigator as Navigator & { wakeLock?: { request: (type: 'screen') => Promise<WakeLockSentinelLike> } }) : undefined;
+  const hasDoc = typeof document !== 'undefined';
+  return {
+    request: nav?.wakeLock ? (type) => nav.wakeLock!.request(type) : null,
+    addVisibilityListener: (cb) => hasDoc && document.addEventListener('visibilitychange', cb),
+    removeVisibilityListener: (cb) => hasDoc && document.removeEventListener('visibilitychange', cb),
+    isVisible: () => !hasDoc || document.visibilityState === 'visible',
+  };
 }
 
-export async function acquireWakeLock(): Promise<void> {
-  wanted = true;
-  document.addEventListener('visibilitychange', onVisibility);
-  await request();
-}
+export function createWakeLock(env: WakeLockEnv = browserEnv()) {
+  let sentinel: WakeLockSentinelLike | null = null;
+  let wanted = false;
+  let pending = 0;
 
-export async function releaseWakeLock(): Promise<void> {
-  wanted = false;
-  document.removeEventListener('visibilitychange', onVisibility);
-  const s = sentinel;
-  sentinel = null;
-  if (s) {
+  async function releaseSentinel(s: WakeLockSentinelLike | null): Promise<void> {
+    if (!s) return;
     try {
       await s.release();
     } catch {
       /* ignore */
     }
   }
+
+  async function request(): Promise<void> {
+    if (!env.request || sentinel || pending > 0) return;
+    pending++;
+    try {
+      const s = await env.request('screen');
+      if (!wanted || sentinel) {
+        // released (or re-acquired) while we were waiting: drop this one
+        await releaseSentinel(s);
+        return;
+      }
+      sentinel = s;
+      s.addEventListener?.('release', () => {
+        if (sentinel === s) sentinel = null;
+      });
+    } catch {
+      /* not granted */
+    } finally {
+      pending--;
+    }
+  }
+
+  const onVisibility = () => {
+    if (wanted && env.isVisible()) void request();
+  };
+
+  return {
+    async acquire(): Promise<void> {
+      if (!wanted) {
+        wanted = true;
+        env.addVisibilityListener(onVisibility);
+      }
+      await request();
+    },
+    async release(): Promise<void> {
+      wanted = false;
+      env.removeVisibilityListener(onVisibility);
+      const s = sentinel;
+      sentinel = null;
+      await releaseSentinel(s);
+    },
+    /** For tests / diagnostics. */
+    get held(): boolean {
+      return sentinel !== null;
+    },
+    get wanted(): boolean {
+      return wanted;
+    },
+  };
 }
+
+const shared = createWakeLock();
+
+export const acquireWakeLock = (): Promise<void> => shared.acquire();
+export const releaseWakeLock = (): Promise<void> => shared.release();

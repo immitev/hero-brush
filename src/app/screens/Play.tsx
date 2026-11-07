@@ -1,8 +1,8 @@
 /** Session + Victory share the 3D scene; the overlay switches with the phase. */
 import { useEffect, useState } from 'react';
 import { sfx } from '../../audio/sfx';
-import { useStore } from '../../game/store';
-import { useSessionRunner } from '../../game/useSessionRunner';
+import { type SessionResult, useStore } from '../../game/store';
+import { type SessionOutcome, useSessionRunner } from '../../game/useSessionRunner';
 import { ZONES, formatClock } from '../../game/zones';
 import { getHero, getSuit } from '../../heroes';
 import { GameScene } from '../../scene/GameScene';
@@ -22,7 +22,7 @@ export function Play() {
       {session.phase === 'countdown' && <CountdownOverlay heroName={hero.name} />}
       {(session.phase === 'playing' || session.phase === 'countdown') && <Hud onPause={session.pause} />}
       {session.paused && <PauseOverlay onResume={session.resume} onQuit={session.quit} />}
-      {session.phase === 'victory' && <VictoryOverlay />}
+      {session.phase === 'victory' && <VictoryOverlay outcome={session.outcome} result={session.result} heroName={hero.name} />}
     </div>
   );
 }
@@ -109,11 +109,17 @@ function PauseOverlay({ onResume, onQuit }: { onResume: () => void; onQuit: () =
   );
 }
 
-function VictoryOverlay() {
-  const result = useStore((s) => s.lastResult);
+function thirdStarHint(result: SessionResult): string | null {
+  if (result.stars !== 2 || result.otherSlotDone) return null;
+  return result.slot === 'morning' ? 'Brush again tonight for a 3rd star.' : 'Brush tomorrow morning and evening for 3 stars.';
+}
+
+function VictoryOverlay({ outcome, result, heroName }: { outcome: SessionOutcome | null; result: SessionResult | null; heroName: string }) {
   const go = useStore((s) => s.go);
   const [shown, setShown] = useState(0);
   const stars = result?.stars ?? 0;
+  const completed = outcome?.completed ?? result?.completed ?? false;
+  const elapsed = outcome?.elapsed ?? result?.elapsed ?? 0;
 
   useEffect(() => {
     if (!result) return;
@@ -130,15 +136,14 @@ function VictoryOverlay() {
     return () => timers.forEach((t) => clearTimeout(t));
   }, [result, stars]);
 
-  if (!result) return <div className="overlay victory" />;
-  const hero = getHero(result.heroId);
+  const hint = result ? thirdStarHint(result) : null;
   return (
     <div className="overlay victory">
       <div className="victory-top">
-        <h1>{result.completed ? 'Cavity King defeated!' : 'Good try!'}</h1>
-        <p>{result.completed ? `${hero.name} says: sparkling clean!` : `You brushed for ${formatClock(result.elapsed)}. Next time go for 2:00!`}</p>
+        <h1>{completed ? 'Cavity King defeated!' : 'Good try!'}</h1>
+        <p>{completed ? `${heroName} says: sparkling clean!` : `You brushed for ${formatClock(elapsed)}. Next time go for 2:00!`}</p>
       </div>
-      <div className="stars" aria-label={`${stars} stars`}>
+      <div className="stars" aria-label={result ? `${stars} stars` : 'Counting stars'}>
         {[1, 2, 3].map((i) => (
           <span key={i} className={i <= shown ? 'pop' : ''}>
             <StarIcon size={64} filled={i <= shown} />
@@ -146,14 +151,14 @@ function VictoryOverlay() {
         ))}
       </div>
       <div className="victory-info">
-        {result.unlockedSuit && (
+        {result?.unlockedSuit && (
           <div className="unlock">
             New suit unlocked: <strong>{result.unlockedSuit.suitName}</strong>
           </div>
         )}
         <div className="streak-line">
-          {result.streak.current > 0 ? `${result.streak.current}-day streak` : 'Start a streak tomorrow!'}
-          {result.stars === 2 && !result.streak.perfectDays && <small>Brush again tonight for a 3rd star.</small>}
+          {result ? (result.streak.current > 0 ? `${result.streak.current}-day streak` : 'Start a streak tomorrow!') : 'Saving your stars...'}
+          {hint && <small>{hint}</small>}
         </div>
         <div className="rinse">Now spit and rinse!</div>
       </div>

@@ -5,33 +5,7 @@ import { useStore } from '../../game/store';
 import { formatClock } from '../../game/zones';
 import { getHero } from '../../heroes';
 import { StarIcon } from '../components/Icons';
-
-function Gate({ onPass }: { onPass: () => void }) {
-  const [a, b] = useMemo(() => [3 + Math.floor(Math.random() * 7), 3 + Math.floor(Math.random() * 7)], []);
-  const [answer, setAnswer] = useState('');
-  const [wrong, setWrong] = useState(false);
-  const check = (e: React.FormEvent) => {
-    e.preventDefault();
-    if (Number(answer) === a * b) onPass();
-    else {
-      setWrong(true);
-      setAnswer('');
-    }
-  };
-  return (
-    <form className="card gate" onSubmit={check}>
-      <h2>Parents only</h2>
-      <p>
-        What is {a} × {b}?
-      </p>
-      <input type="number" inputMode="numeric" value={answer} onChange={(e) => setAnswer(e.target.value)} autoFocus aria-label="Answer" />
-      {wrong && <small className="error">Not quite, try again.</small>}
-      <button className="btn" type="submit">
-        Enter
-      </button>
-    </form>
-  );
-}
+import { Gate } from './ParentGate';
 
 export function Parent() {
   const go = useStore((s) => s.go);

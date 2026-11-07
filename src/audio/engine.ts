@@ -8,6 +8,16 @@ let musicBus: GainNode | null = null;
 let sfxBus: GainNode | null = null;
 let noiseBuffer: AudioBuffer | null = null;
 
+// Volumes are remembered here so that values set before the context exists
+// (settings loaded at startup) are applied when the buses are created.
+let musicVolume = 0.7;
+let sfxVolume = 0.8;
+
+function applyVolumes(): void {
+  if (musicBus) musicBus.gain.value = musicVolume * musicVolume; // perceptual-ish curve
+  if (sfxBus) sfxBus.gain.value = sfxVolume * sfxVolume;
+}
+
 export function getContext(): AudioContext | null {
   if (ctx) return ctx;
   if (typeof window === 'undefined') return null;
@@ -24,6 +34,7 @@ export function getContext(): AudioContext | null {
   sfxBus = ctx.createGain();
   musicBus.connect(master);
   sfxBus.connect(master);
+  applyVolumes();
   return ctx;
 }
 
@@ -37,11 +48,17 @@ export function getSfxBus(): GainNode | null {
   return sfxBus;
 }
 
+/** True when the context can be resumed ('suspended' or iOS 'interrupted'). */
+function needsResume(c: AudioContext): boolean {
+  const state = c.state as string;
+  return state !== 'running' && state !== 'closed';
+}
+
 /** Must be called from a user gesture (tap). */
 export async function unlockAudio(): Promise<void> {
   const c = getContext();
   if (!c) return;
-  if (c.state !== 'running') {
+  if (needsResume(c)) {
     try {
       await c.resume();
     } catch {
@@ -67,7 +84,7 @@ export async function suspendAudio(): Promise<void> {
 }
 
 export async function resumeAudio(): Promise<void> {
-  if (ctx && ctx.state === 'suspended') {
+  if (ctx && needsResume(ctx)) {
     try {
       await ctx.resume();
     } catch {
@@ -77,8 +94,9 @@ export async function resumeAudio(): Promise<void> {
 }
 
 export function setVolumes(music: number, sfx: number): void {
-  if (musicBus) musicBus.gain.value = music * music; // perceptual-ish curve
-  if (sfxBus) sfxBus.gain.value = sfx * sfx;
+  musicVolume = Math.max(0, Math.min(1, music));
+  sfxVolume = Math.max(0, Math.min(1, sfx));
+  applyVolumes();
 }
 
 export function getNoiseBuffer(): AudioBuffer | null {

@@ -26,6 +26,22 @@ if (typeof speechSynthesis !== 'undefined') {
   });
 }
 
+/**
+ * iOS only allows speech that was started synchronously inside a user gesture.
+ * Call this from the tap handler (before any `await`) to unlock later prompts.
+ */
+export function primeSpeech(): void {
+  if (typeof speechSynthesis === 'undefined') return;
+  try {
+    const u = new SpeechSynthesisUtterance('');
+    u.volume = 0;
+    speechSynthesis.speak(u);
+    pickVoice();
+  } catch {
+    /* ignore */
+  }
+}
+
 export function speak(text: string, opts: { interrupt?: boolean; pitch?: number; rate?: number } = {}): void {
   if (muted || typeof speechSynthesis === 'undefined' || !text) return;
   try {
