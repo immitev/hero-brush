@@ -40,6 +40,9 @@ export interface HeroSim {
   lastStroke: number;
   /** Speed of the last move, for travel animations. */
   speed: number;
+  /** Which side of the current target the hero approaches from (+1 / -1), and for which monster. */
+  standoffSide: 1 | -1;
+  standoffFor: number;
 }
 
 export type FxEvent =
@@ -82,6 +85,10 @@ export interface Runtime {
   /** Camera shake intensity 0..1 (decays). */
   shake: number;
   kills: number;
+  /** Viewport aspect ratio (width / height), written by the scene. */
+  aspect: number;
+  /** Current camera position, written by the scene. */
+  camPos: Vec3;
 }
 
 export function createRuntime(): Runtime {
@@ -110,6 +117,8 @@ export function createRuntime(): Runtime {
       scrubStartedAt: -10,
       lastStroke: -1,
       speed: 0,
+      standoffSide: 1,
+      standoffFor: 0,
     },
     events: [],
     nextId: 1,
@@ -117,6 +126,8 @@ export function createRuntime(): Runtime {
     nextSpawnIn: 0.6,
     shake: 0,
     kills: 0,
+    aspect: 0.5625,
+    camPos: [0, 0.4, 9],
   };
 }
 

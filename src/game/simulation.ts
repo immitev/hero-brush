@@ -5,13 +5,13 @@
  * testable); the scene only renders it.
  */
 import type { HeroPack } from '../heroes/types';
+import { pickStandoffSide, visibleSpawnSpots } from './framing';
 import {
-  type PerchSurface,
   type Vec3,
   bossPositionAt,
   bossRadius,
   bossStandoff,
-  perchOn,
+  cameraPoseForZone,
   scrubStandoff,
   teethForZone,
   TEETH,
@@ -19,7 +19,7 @@ import {
   zoneHome,
 } from './mouth';
 import type { Monster, Runtime } from './runtime';
-import { BOSS_START, ZONES, bossProgress, isBossActive, zoneCleanliness, zoneIndexAt, zoneProgress } from './zones';
+import { BOSS_START, bossProgress, isBossActive, zoneCleanliness, zoneIndexAt, zoneProgress } from './zones';
 
 export const BEAT_SECONDS = 0.5; // 120 bpm
 /** Scrub strokes happen on 8th notes. */
@@ -141,11 +141,13 @@ function stepHero(rt: Runtime, hero: HeroPack, t: number, dt: number): void {
       }
     }
     if (target) {
-      // approach from the side that is closer to where the hero currently is
+      // approach from the side that keeps the brush arm on the camera side (and on screen)
       const perch = { pos: target.pos, normal: target.normal };
-      const a = scrubStandoff(perch, 1);
-      const b = scrubStandoff(perch, -1);
-      dest = dist(a, h.pos) <= dist(b, h.pos) ? a : b;
+      if (target.id !== h.standoffFor) {
+        h.standoffFor = target.id;
+        h.standoffSide = pickStandoffSide(perch, rt.camPos, rt.aspect, cameraPoseForZone(rt.zoneIndex));
+      }
+      dest = scrubStandoff(perch, h.standoffSide);
       aim = target.pos;
     } else {
       h.targetId = 0;
@@ -215,19 +217,18 @@ function stepHero(rt: Runtime, hero: HeroPack, t: number, dt: number): void {
 }
 
 function spawnMonster(rt: Runtime, zoneIndex: number, rnd: () => number): boolean {
-  const zone = ZONES[zoneIndex];
-  const candidates = teethForZone(zone).filter((td) => !rt.monsters.some((m) => m.toothIndex === td.index));
-  if (candidates.length === 0) return false;
-  const tooth = candidates[Math.floor(rnd() * candidates.length)];
-  let surface: PerchSurface;
-  if (zone.surface === 'outside') surface = 'outside';
-  else surface = rnd() < 0.65 ? 'chewing' : 'inside';
-  const perch = perchOn(tooth, surface);
+  // only spots that are on screen (perch + hero stand-off inside the HUD-safe area)
+  const spots = visibleSpawnSpots(zoneIndex, rt.aspect).filter((s) => !rt.monsters.some((m) => m.toothIndex === s.tooth.index));
+  if (spots.length === 0) return false;
+  // prefer chewing surfaces in the inside zones
+  const chewing = spots.filter((s) => s.surface === 'chewing');
+  const pool = chewing.length > 0 && rnd() < 0.65 ? chewing : spots;
+  const spot = pool[Math.floor(rnd() * pool.length)];
   rt.monsters.push({
     id: rt.nextId++,
-    toothIndex: tooth.index,
-    pos: perch.pos,
-    normal: perch.normal,
+    toothIndex: spot.tooth.index,
+    pos: spot.perch.pos,
+    normal: spot.perch.normal,
     state: 'rising',
     stateAt: rt.elapsed,
     bornAt: rt.elapsed,

@@ -1,12 +1,20 @@
-/** Moves the camera between zone poses with smooth damping, plus boss shake. */
+/**
+ * Moves the camera between zone poses with smooth damping, gently follows the
+ * hero (blended with the zone pose so the row stays framed), applies boss
+ * shake, and publishes aspect / camera position to the runtime for the
+ * simulation's on-screen checks.
+ */
 import { useFrame } from '@react-three/fiber';
 import { useRef } from 'react';
 import * as THREE from 'three';
+import { verticalFov } from '../game/framing';
 import { BOSS_CAMERA, INTRO_CAMERA, cameraPoseForZone } from '../game/mouth';
 import { runtime } from '../game/runtime';
 
 const targetPos = new THREE.Vector3();
 const targetLook = new THREE.Vector3();
+const focus = new THREE.Vector3();
+const poseTarget = new THREE.Vector3();
 
 export function CameraRig() {
   const look = useRef(new THREE.Vector3(0, 0, 0));
@@ -16,18 +24,37 @@ export function CameraRig() {
   useFrame((state, dt) => {
     const cam = state.camera as THREE.PerspectiveCamera;
     const rt = runtime;
+    const aspect = state.size.width / Math.max(1, state.size.height);
+    rt.aspect = aspect;
+
     let pose;
+    let follow = 0;
     if (rt.phase === 'countdown' || rt.phase === 'idle') pose = INTRO_CAMERA;
     else if (rt.phase === 'victory') pose = BOSS_CAMERA;
-    else if (rt.bossActive) pose = BOSS_CAMERA;
-    else pose = cameraPoseForZone(rt.zoneIndex);
+    else if (rt.bossActive) {
+      pose = BOSS_CAMERA;
+      follow = 0.12;
+    } else {
+      pose = cameraPoseForZone(rt.zoneIndex);
+      follow = 0.3;
+    }
     targetPos.set(pose.pos[0], pose.pos[1], pose.pos[2]);
-    targetLook.set(pose.target[0], pose.target[1], pose.target[2]);
+    poseTarget.set(pose.target[0], pose.target[1], pose.target[2]);
+    targetLook.copy(poseTarget);
 
-    // keep the horizontal field of view roughly constant across aspect ratios
-    const aspect = state.size.width / Math.max(1, state.size.height);
-    const hfov = 52;
-    const vfov = THREE.MathUtils.clamp((2 * Math.atan(Math.tan((hfov * Math.PI) / 360) / aspect) * 180) / Math.PI, 42, 85);
+    if (follow > 0) {
+      // focus between the hero and what it is scrubbing
+      const h = rt.hero;
+      focus.set(h.pos[0], h.pos[1] + 0.5, h.pos[2]);
+      if (h.aim) focus.lerp(new THREE.Vector3(h.aim[0], h.aim[1], h.aim[2]), 0.5);
+      focus.sub(poseTarget);
+      // keep the vertical drift small so the row never leaves the frame
+      focus.y = THREE.MathUtils.clamp(focus.y, -0.7, 0.7);
+      targetLook.addScaledVector(focus, follow);
+      targetPos.addScaledVector(focus, follow * 0.45);
+    }
+
+    const vfov = verticalFov(aspect);
     if (Math.abs(cam.fov - vfov) > 0.1) {
       cam.fov = vfov;
       cam.updateProjectionMatrix();
@@ -42,6 +69,7 @@ export function CameraRig() {
       cam.position.lerp(targetPos, k);
       look.current.lerp(targetLook, k);
     }
+    rt.camPos = [cam.position.x, cam.position.y, cam.position.z];
     if (rt.shake > 0.01) {
       shakeSeed.current += dt * 40;
       const s = rt.shake * 0.12;

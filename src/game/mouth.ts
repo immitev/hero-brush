@@ -145,10 +145,18 @@ export function perchSide(normal: Vec3): Vec3 {
 export function scrubStandoff(perch: Perch, sideSign = 1): Vec3 {
   const s = perchSide(perch.normal);
   const n = perch.normal;
+  if (Math.abs(n[1]) > 0.9) {
+    // chewing surface: hover beside the tooth with the hand roughly at surface
+    // height (the brush arm pitches up/down towards the monster), never inside the row
+    const side = 0.95 * sideSign;
+    const front = 0.3;
+    const y = n[1] < 0 ? perch.pos[1] - 0.95 : perch.pos[1] + 0.05;
+    return [perch.pos[0] + n[0] * front + s[0] * side, y, perch.pos[2] + n[2] * front + s[2] * side];
+  }
   const front = 0.45;
   const side = 0.8 * sideSign;
-  const drop = Math.abs(n[1]) > 0.9 ? 0 : -0.5; // feet below the tooth for wall surfaces
-  return [perch.pos[0] + n[0] * front + s[0] * side, perch.pos[1] + n[1] * front + s[1] * side + drop, perch.pos[2] + n[2] * front + s[2] * side];
+  const drop = -0.5; // feet below the tooth centre so the hand is at monster height
+  return [perch.pos[0] + n[0] * front + s[0] * side, perch.pos[1] + s[1] * side + drop, perch.pos[2] + n[2] * front + s[2] * side];
 }
 
 /**
@@ -167,7 +175,7 @@ export function zoneHome(zoneIndex: number): Vec3 {
     const oz = Math.cos(a);
     return [c[0] + ox * 0.9, up ? c[1] - 1.5 : c[1] + 0.6, c[2] + oz * 0.9];
   }
-  return up ? [1.4, -0.9, 2.4] : [1.4, 0.2, 2.4];
+  return up ? [0.8, -1.0, 2.6] : [0.8, 0.3, 2.6];
 }
 
 export function zoneCenter(zoneIndex: number): Vec3 {

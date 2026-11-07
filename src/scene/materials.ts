@@ -49,13 +49,17 @@ export class ToothMaterial extends THREE.MeshToonMaterial {
           '#include <common>',
           `#include <common>
            varying vec3 vObjPos;
-           varying vec3 vObjNormal;`,
+           varying vec3 vObjNormal;
+           varying vec3 vWorldPos;
+           varying vec3 vWorldNormal;`,
         )
         .replace(
           '#include <begin_vertex>',
           `#include <begin_vertex>
            vObjPos = position;
-           vObjNormal = normal;`,
+           vObjNormal = normal;
+           vWorldPos = (modelMatrix * vec4(position, 1.0)).xyz;
+           vWorldNormal = normalize(mat3(modelMatrix) * normal);`,
         );
       shader.fragmentShader = shader.fragmentShader
         .replace(
@@ -69,6 +73,8 @@ export class ToothMaterial extends THREE.MeshToonMaterial {
            uniform vec3 uCleanColor;
            varying vec3 vObjPos;
            varying vec3 vObjNormal;
+           varying vec3 vWorldPos;
+           varying vec3 vWorldNormal;
            float hbClean;
            float hb_hash(vec3 p) {
              p = fract(p * 0.3183099 + vec3(0.1, 0.17, 0.13));
@@ -101,18 +107,21 @@ export class ToothMaterial extends THREE.MeshToonMaterial {
         .replace(
           '#include <emissivemap_fragment>',
           `#include <emissivemap_fragment>
-           vec3 hbView = normalize(vViewPosition);
-           vec3 hbHalf = normalize(hbView + normalize(vec3(0.35, 0.9, 0.5)));
-           float hbSpec = pow(max(dot(normal, hbHalf), 0.0), 48.0);
-           float hbRim = pow(1.0 - max(dot(normal, hbView), 0.0), 3.0);
+           // glossy highlight from a fixed WORLD light (top-front), so undersides and
+           // chewing surfaces seen from below do not light up when the camera looks up
+           vec3 hbN = normalize(vWorldNormal);
+           vec3 hbViewW = normalize(cameraPosition - vWorldPos);
+           vec3 hbHalf = normalize(hbViewW + normalize(vec3(0.4, 1.0, 0.7)));
+           float hbSpec = pow(max(dot(hbN, hbHalf), 0.0), 48.0);
+           float hbRim = pow(1.0 - max(dot(hbN, hbViewW), 0.0), 3.0);
            float gloss = mix(0.3, 1.0, hbClean);
-           totalEmissiveRadiance += vec3(hbSpec * 0.45 * gloss + hbRim * 0.06 * gloss);
+           totalEmissiveRadiance += vec3(hbSpec * 0.4 * gloss + hbRim * 0.05 * gloss);
            float tw = hb_hash(floor(vObjPos * 11.0) + floor(uTime * 3.0));
            float sp = step(0.982, tw) * smoothstep(0.8, 1.0, hbClean);
            totalEmissiveRadiance += vec3(1.6, 1.6, 1.8) * sp;`,
         );
     };
-    this.customProgramCacheKey = () => 'hero-brush-tooth-v3';
+    this.customProgramCacheKey = () => 'hero-brush-tooth-v4';
   }
 }
 

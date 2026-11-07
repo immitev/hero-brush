@@ -22,6 +22,10 @@ export interface HeroAnim {
   speed: number;
   /** Seconds since entering the current mode. */
   modeT: number;
+  /** Extra yaw of the brush arm (radians) so it keeps pointing at the monster while the body faces the camera. */
+  armYaw: number;
+  /** Pitch of the brush arm (radians, positive = up) towards a monster above/below the hand. */
+  armPitch: number;
 }
 
 export interface HeroModelProps {
@@ -98,7 +102,7 @@ function animateCommon(rig: Rig, anim: HeroAnim, t: number, style: 'hover' | 'sw
       p.legLX = -1.1 * travel + 0.1;
       p.legRX = -0.9 * travel + 0.1;
     } else {
-      p.rootX = 0.15 + travel * 0.6;
+      p.rootX = 0.15 + travel * 0.45;
       p.armLX = 0.1;
       p.armLZ = 0.9 + travel * 0.5;
       p.legLX = 0.1 + travel * 0.3;
@@ -145,7 +149,9 @@ function animateCommon(rig: Rig, anim: HeroAnim, t: number, style: 'hover' | 'sw
   }
 
   armL.rotation.set(p.armLX, 0, p.armLZ);
-  armR.rotation.set(p.armRX, 0, armRZ);
+  // YXZ: tilt (z) and raise (x) first, then yaw the whole raised arm around the shoulder
+  armR.rotation.order = 'YXZ';
+  armR.rotation.set(p.armRX - (fighting ? anim.armPitch : 0), fighting ? anim.armYaw : 0, armRZ);
   legL.rotation.set(p.legLX, 0, 0.08);
   legR.rotation.set(p.legRX, 0, -0.08);
   return travel;
@@ -573,5 +579,5 @@ export function HeroModel(props: HeroModelProps) {
 }
 
 export function createHeroAnim(mode: HeroMode = 'idle'): HeroAnim {
-  return { mode, state: 'idle', speed: 0, modeT: 0 };
+  return { mode, state: 'idle', speed: 0, modeT: 0, armYaw: 0, armPitch: 0 };
 }
