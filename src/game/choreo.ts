@@ -35,18 +35,22 @@ export const BRUSH = {
   headLength: 0.72,
   headWidth: 0.28,
   headThick: 0.12,
-  bristleLen: 0.17,
+  bristleLen: 0.24,
   neckLength: 0.28,
   handleLength: 1.05,
   /** Distance from the head centre to the grip point along +X (normal grip). */
   grip: 1.2,
   /** Grip used when the brush is held vertically for the front teeth (keeps the hero clear of the head). */
-  gripShort: 1.05,
+  gripShort: 0.9,
+  /** Grip near the end of the handle, used on the chewing surfaces. */
+  gripLong: 1.5,
 };
 
 /** Where the hand holds the brush for a motion. */
 export function gripDistance(motion: Motion): number {
-  return motion === 'flick' ? BRUSH.gripShort : BRUSH.grip;
+  if (motion === 'flick') return BRUSH.gripShort;
+  if (motion === 'scrub') return BRUSH.gripLong; // far end of the handle: keeps the hero clear of the row seen from above
+  return BRUSH.grip;
 }
 
 /** Seconds spent moving the brush from one stop to the next. */
@@ -122,7 +126,7 @@ function groupTeeth(seg: Segment): ToothDef[][] {
   const groups: ToothDef[][] = [];
   for (const row of rows) {
     if (seg.surface === 'chewing') {
-      groups.push([0, 1, 2, 3].map((c) => tooth(row, c)), [4, 5, 6, 7].map((c) => tooth(row, c)), [8, 9, 10, 11].map((c) => tooth(row, c)));
+      groups.push([0, 1, 2].map((c) => tooth(row, c)), [3, 4, 5].map((c) => tooth(row, c)), [6, 7, 8].map((c) => tooth(row, c)), [9, 10, 11].map((c) => tooth(row, c)));
       continue;
     }
     const cols = [...seg.cols];
@@ -160,7 +164,7 @@ function stopForGroup(seg: Segment, teeth: ToothDef[], index: number, count: num
   // the hero stands beside the brush: mostly along the row (handle side) and only a little
   // off the surface, so it never ends up between the camera and the bristles
   const heroDir: Vec3 =
-    surface === 'outer' ? norm(add(scale(side, 0.9), scale(away, 0.4))) : surface === 'inner' ? norm(add(scale(side, 0.95), scale(away, 0.15))) : norm(add(scale(away, 0.35), scale(side, 0.9)));
+    surface === 'outer' ? norm(add(scale(side, 0.9), scale(away, 0.4))) : surface === 'inner' ? norm(add(scale(side, 0.95), scale(away, 0.15))) : norm(add(scale(away, 0.1), scale(side, 1.0)));
 
   const seconds = seg.seconds / count;
   const stop: Stop = {
@@ -188,24 +192,27 @@ function stopForGroup(seg: Segment, teeth: ToothDef[], index: number, count: num
   const chest: Vec3 = [hero[0], hero[1] + 0.8 * HERO_SCALE, hero[2]];
   // close-up of the current 2–3 teeth: the camera sits on the opposite side of the hero, offset
   // along the row so the bristle tilt is seen in profile, and a little towards the gum side
-  const target = lerp3(point, chest, 0.22);
+  const target = lerp3(point, chest, 0.2);
   const gumUp: Vec3 = [0, up ? 1 : -1, 0];
   if (surface === 'outer') {
+    // side-on along the row so the bristle tilt into the gum reads; the handle leaves the frame diagonally
     stop.camera = {
-      pos: add(add(add(point, scale(normal, 3.0)), scale(side, -1.9)), scale(gumUp, 0.3)),
-      target: add(target, scale(gumUp, 0.08)),
+      pos: add(add(add(point, scale(normal, 1.9)), scale(side, -2.6)), scale(gumUp, 0.35)),
+      target: add(target, scale(gumUp, 0.05)),
     };
   } else if (surface === 'inner') {
     const front = first.col >= 4 && first.col <= 7;
     // inside the arch (between the rows), from the hero's opposite side
+    // front: the handle (and the hero) hang a long way below/above the head during the flick, so the
+    // look point is biased further towards the hero to keep both in a 16:9 frame
     stop.camera = front
-      ? { pos: add(add(add(point, scale(normal, 2.6)), scale(side, -1.6)), scale(gumUp, 0.5)), target }
-      : { pos: add(add(add(point, scale(normal, 2.2)), scale(side, -1.3)), scale(gumUp, -0.3)), target };
+      ? { pos: add(add(add(point, scale(normal, 3.3)), scale(side, -1.6)), scale(gumUp, 0.3)), target: lerp3(point, chest, 0.58) }
+      : { pos: add(add(add(point, scale(normal, 1.7)), scale(side, -1.9)), scale(gumUp, -0.15)), target };
   } else {
     stop.camera = {
       // above/below the row and a little outside it: below the upper lip, above the tongue
-      pos: add(add(add(point, scale(gumUp, -1.9)), scale(away, 1.1)), scale(side, 1.25)),
-      target: lerp3(point, chest, 0.38),
+      pos: add(add(add(point, scale(gumUp, -2.6)), scale(away, 1.4)), scale(side, -0.6)),
+      target: lerp3(point, chest, 0.4),
     };
   }
   return stop;
@@ -322,7 +329,8 @@ export const TONGUE_STROKE = 0.9;
 function drift(s: Stop, u: number): Vec3 {
   if (s.driftHalf <= 0) return [0, 0, 0];
   const k = Math.max(0, Math.min(1, (u - 0.2) / Math.max(0.1, s.seconds - SWEEP_SECONDS - 0.4)));
-  return scale(s.tangent, -s.driftHalf + 2 * s.driftHalf * k);
+  // from the back of the group towards the front (the hero's side), symmetric for left and right groups
+  return scale(s.tangent, s.heroSide * (-s.driftHalf + 2 * s.driftHalf * k));
 }
 
 /** Pose while brushing at a stop, `u` seconds into it. */
@@ -349,7 +357,7 @@ function motionPose(s: Stop, u: number): BrushPose {
     // 70 % of the cycle sweeping from the gum to the edge, 30 % lifting back
     const k = c < 0.7 ? c / 0.7 : 1 - (c - 0.7) / 0.3;
     const lifting = c >= 0.7;
-    const pos = add(add(base.pos, scale(gumDir, -0.55 * k)), scale(normal, lifting ? 0.12 : 0));
+    const pos = add(add(base.pos, scale(gumDir, -0.5 * k)), scale(normal, lifting ? 0.12 : 0));
     return { ...base, pos, contact: !lifting, cycle: c };
   }
   if (s.motion === 'scrub') {
@@ -407,12 +415,31 @@ export interface HeroPose {
 export function heroPoseFor(stop: Stop, p: BrushPose): HeroPose {
   const grip = gripPoint(p);
   const reach = HERO_ARM_REACH * HERO_SCALE * 0.75;
-  const shoulder = add(grip, scale(stop.heroDir, reach));
+  // the body sits below (upper row) / above (lower row) the handle, in the gap, never over the row
+  // On the flat surfaces nothing is needed, and beside the vertical handle of the inner front teeth any offset
+  // along the handle would put the hero's silhouette over the neighbouring front tooth.
+  const drop = stop.surface === 'chewing' || stop.surface === 'tongue' || stop.motion === 'flick' ? 0 : stop.row === 'upper' ? -0.3 : 0.3;
+  const shoulder = add(add(grip, scale(stop.heroDir, reach)), [0, drop, 0]);
   const shoulderY = HERO_SHOULDER_LOCAL[1] * HERO_SCALE;
   const pos: Vec3 = [shoulder[0], shoulder[1] - shoulderY, shoulder[2]];
   const look = sub(stop.point, pos);
   const facing = norm([look[0], 0, look[2]]);
   return { pos, facing };
+}
+
+/** Points on the hero's silhouette (feet, chest, head top, shoulders) for occlusion checks. */
+export function heroBoundPoints(feet: Vec3, facing: Vec3): Vec3[] {
+  const h = 1.8 * HERO_SCALE;
+  const w = 0.5 * HERO_SCALE;
+  const right: Vec3 = [facing[2], 0, -facing[0]];
+  const chest: Vec3 = [feet[0], feet[1] + h * 0.45, feet[2]];
+  return [
+    [feet[0], feet[1] + 0.05, feet[2]],
+    chest,
+    [feet[0], feet[1] + h, feet[2]],
+    add(chest, scale(right, w)),
+    add(chest, scale(right, -w)),
+  ];
 }
 
 /** The pure "resting" hero spot for a stop (used by framing tests). */

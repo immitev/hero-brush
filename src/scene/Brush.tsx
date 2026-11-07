@@ -8,7 +8,7 @@
 import { useFrame } from '@react-three/fiber';
 import { useMemo, useRef } from 'react';
 import * as THREE from 'three';
-import { BRUSH } from '../game/choreo';
+import { BRUSH, STOPS } from '../game/choreo';
 import { runtime } from '../game/runtime';
 import { sessionProgress } from '../game/segments';
 import type { HeroPack, Suit } from '../heroes';
@@ -24,6 +24,10 @@ const zAxis = new THREE.Vector3();
 const basis = new THREE.Matrix4();
 const dummy = new THREE.Object3D();
 const shadowDir = new THREE.Vector3();
+const gx = new THREE.Vector3();
+const gy = new THREE.Vector3();
+const gz = new THREE.Vector3();
+const guideBasis = new THREE.Matrix4();
 const shadowUp = new THREE.Vector3(0, 0, 1);
 
 export function Brush({ hero, suit }: { hero: HeroPack; suit: Suit }) {
@@ -31,6 +35,7 @@ export function Brush({ hero, suit }: { hero: HeroPack; suit: Suit }) {
   const tufts = useRef<THREE.InstancedMesh>(null);
   const paste = useRef<THREE.Group>(null);
   const shadow = useRef<THREE.Mesh>(null);
+  const guide = useRef<THREE.Group>(null);
   const m = useMemo(
     () => ({
       head: new THREE.MeshStandardMaterial({ color: suit.palette.brush, roughness: 0.45 }),
@@ -44,6 +49,7 @@ export function Brush({ hero, suit }: { hero: HeroPack; suit: Suit }) {
       stripeA: toon('#ff5c7a'),
       stripeB: toon('#4f8dff'),
       shadow: new THREE.MeshBasicMaterial({ color: '#000000', transparent: true, opacity: 0.28, depthWrite: false }),
+      guide: new THREE.MeshBasicMaterial({ color: '#ffd166', transparent: true, opacity: 0.9, depthTest: false, depthWrite: false, toneMapped: false }),
     }),
     [suit, hero],
   );
@@ -75,6 +81,24 @@ export function Brush({ hero, suit }: { hero: HeroPack; suit: Suit }) {
       s.position.set(b.pos[0] + b.bristle[0] * depth, b.pos[1] + b.bristle[1] * depth, b.pos[2] + b.bristle[2] * depth);
       shadowDir.set(-b.bristle[0], -b.bristle[1], -b.bristle[2]);
       s.quaternion.setFromUnitVectors(shadowUp, shadowDir);
+    }
+    // 45° helper: dashed line along the bristles + angle arc at the gum, first 2.5 s of a circles stop
+    if (guide.current) {
+      const stop = STOPS[runtime.stopIndex];
+      const u = runtime.elapsed - stop.start;
+      const show = runtime.phase === 'playing' && b.contact && b.motion === 'circles' && stop.index === 0 && u < 2.5;
+      guide.current.visible = show;
+      if (show) {
+        m.guide.opacity = 0.9 * Math.min(1, (2.5 - u) / 0.6);
+        const tip = BRUSH.headThick / 2 + BRUSH.bristleLen;
+        guide.current.position.set(b.pos[0] + b.bristle[0] * tip, b.pos[1] + b.bristle[1] * tip, b.pos[2] + b.bristle[2] * tip);
+        // plane of the angle: X = towards the gum (along the tooth), Y = out of the surface
+        gx.set(stop.gumDir[0], stop.gumDir[1], stop.gumDir[2]).normalize();
+        gy.set(stop.normal[0], stop.normal[1], stop.normal[2]).normalize();
+        gz.crossVectors(gx, gy).normalize();
+        guideBasis.makeBasis(gx, gy, gz);
+        guide.current.quaternion.setFromRotationMatrix(guideBasis);
+      }
     }
     const t = tufts.current;
     if (t && !t.userData.laidOut) {
@@ -160,6 +184,20 @@ export function Brush({ hero, suit }: { hero: HeroPack; suit: Suit }) {
             <cylinderGeometry args={[0.076, 0.076, 0.06, 12]} />
           </mesh>
         </group>
+      </group>
+      {/* 45° guide (world space, at the bristle tips): arc from the tooth axis to the bristles + dashes along the bristles */}
+      <group ref={guide} visible={false} renderOrder={3}>
+        <mesh material={m.guide}>
+          <ringGeometry args={[0.5, 0.56, 24, 1, 0, Math.PI / 4]} />
+        </mesh>
+        <mesh material={m.guide} position={[0.78, 0, 0]}>
+          <boxGeometry args={[0.5, 0.03, 0.03]} />
+        </mesh>
+        {[0.25, 0.5, 0.75, 1.0, 1.25].map((d) => (
+          <mesh key={d} material={m.guide} position={[d * Math.SQRT1_2, d * Math.SQRT1_2, 0]} rotation={[0, 0, Math.PI / 4]}>
+            <boxGeometry args={[0.13, 0.035, 0.035]} />
+          </mesh>
+        ))}
       </group>
       {/* contact shadow, placed in world space on the surface being brushed */}
       <mesh ref={shadow} visible={false} material={m.shadow} renderOrder={2}>

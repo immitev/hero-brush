@@ -67,7 +67,7 @@ export function createRuntime(): Runtime {
     segmentProgress: 0,
     stopIndex: 0,
     brush: { pos: [0, -0.2, 4.2], bristle: [0, -1, 0], axis: [1, 0, 0], contact: false, cycle: 0, motion: 'circles' },
-    hero: { pos: [0, -1.2, 4.5], facing: [0, 0, 1], state: 'idle', speed: 0 },
+    hero: { pos: [0, -1.35, 5.3], facing: [0, 0, 1], state: 'idle', speed: 0 },
     plaque: createPlaque(),
     clean: 0,
     surfacesDone: 0,

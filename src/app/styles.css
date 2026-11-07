@@ -850,6 +850,13 @@ input:focus-visible {
   backdrop-filter: blur(6px);
   -webkit-backdrop-filter: blur(6px);
 }
+/* wide (landscape) screens: keep the centre of the view clear for the hero above / below a vertical brush */
+@media (min-aspect-ratio: 4/3) and (min-width: 700px) {
+  .coach {
+    align-self: flex-start;
+    width: min(42%, 380px);
+  }
+}
 .coach-text {
   font-weight: 900;
   font-size: clamp(15px, 4.2vw, 20px);

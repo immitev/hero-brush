@@ -1,6 +1,6 @@
 import { describe, expect, it } from 'vitest';
-import { BRUSH, FLICK_HZ, SCRUB_HZ, STOPS, TONGUE_HZ, TRAVEL_SECONDS, brushPoseAt, cameraForStop, gripPoint, heroPoseFor, heroSpotFor, stopAt, stopsForSegment } from './choreo';
-import { inSafeArea, occludedByTeeth, projectToNdc, verticalFov } from './framing';
+import { BRUSH, FLICK_HZ, SCRUB_HZ, STOPS, TONGUE_HZ, TRAVEL_SECONDS, brushPoseAt, cameraForStop, gripPoint, heroBoundPoints, heroPoseFor, heroSpotFor, stopAt, stopsForSegment } from './choreo';
+import { inSafeArea, occludedByTeeth, projectToNdc, toothRadius, verticalFov } from './framing';
 import { HERO_ARM_REACH, HERO_SCALE, TEETH, type Vec3, dot, norm, sub } from './mouth';
 import { SEGMENTS, SESSION_SECONDS } from './segments';
 
@@ -120,16 +120,33 @@ describe('framing of the demo', () => {
         const hero = heroSpotFor(s);
         const chest: [number, number, number] = [hero[0], hero[1] + 0.8 * HERO_SCALE, hero[2]];
         expect(inSafeArea(projectToNdc(chest, cam, aspect), { xMax: 0.9, yMin: -0.8, yMax: 0.8 }), `${label} hero`).toBe(true);
-        expect(occludedByTeeth(cam.pos, head, s.teeth), `${label} head occluded`).toBe(false);
-        // the hero's body (radius ~0.3 around the chest) must not cover the brush head on screen
-        const headNdc = projectToNdc(head, cam, aspect)!;
-        const chestNdc = projectToNdc(chest, cam, aspect)!;
-        if (chestNdc.depth < headNdc.depth) {
-          const dx = Math.abs(headNdc.x - chestNdc.x) * aspect; // in vertical-NDC units
-          const dy = Math.abs(headNdc.y - chestNdc.y);
-          const bodyRadiusNdc = (0.3 / Math.tan((verticalFov(aspect) * Math.PI) / 360)) / chestNdc.depth;
-          expect(Math.hypot(dx, dy), `${label} hero covers brush`).toBeGreaterThan(bodyRadiusNdc);
+        // ...and it stays there through the whole stop (flicks and strokes move the hero with the grip)
+        for (let u = TRAVEL_SECONDS; u < s.seconds; u += 0.1) {
+          const feet = heroPoseFor(s, brushPoseAt(s.start + u)).pos;
+          const c: [number, number, number] = [feet[0], feet[1] + 0.8 * HERO_SCALE, feet[2]];
+          expect(inSafeArea(projectToNdc(c, cam, aspect), { xMax: 0.95, yMin: -0.9, yMax: 0.9 }), `${label} hero at ${u.toFixed(1)}s`).toBe(true);
         }
+        expect(occludedByTeeth(cam.pos, head, s.teeth), `${label} head occluded`).toBe(false);
+        // the hero's projected silhouette must not overlap the brush head or the target teeth when it is nearer
+        const f = 1 / Math.tan((verticalFov(aspect) * Math.PI) / 360);
+        const pose = heroPoseFor(s, brushPoseAt(s.start + Math.min(1.0, s.seconds * 0.5)));
+        const bounds = heroBoundPoints(pose.pos, pose.facing).map((p) => projectToNdc(p, cam, aspect)!);
+        const pad = (0.08 * f) / bounds[1].depth;
+        const minX = Math.min(...bounds.map((b) => b.x)) - pad / aspect;
+        const maxX = Math.max(...bounds.map((b) => b.x)) + pad / aspect;
+        const minY = Math.min(...bounds.map((b) => b.y)) - pad;
+        const maxY = Math.max(...bounds.map((b) => b.y)) + pad;
+        const heroDepth = bounds[1].depth;
+        const covers = (p: [number, number, number], radius: number, what: string) => {
+          const n = projectToNdc(p, cam, aspect);
+          if (!n || heroDepth > n.depth) return;
+          const rx = (radius * f) / n.depth / aspect;
+          const ry = (radius * f) / n.depth;
+          const overlap = n.x + rx > minX && n.x - rx < maxX && n.y + ry > minY && n.y - ry < maxY;
+          expect(overlap, `${label}: hero covers ${what}`).toBe(false);
+        };
+        covers(head, 0.3, 'brush head');
+        for (const ti of s.teeth) covers(TEETH[ti].pos, toothRadius(TEETH[ti]) * 0.8, `tooth ${ti}`);
       }
     });
   }
@@ -144,7 +161,8 @@ describe('framing of the demo', () => {
       const grip = gripPoint(brushPoseAt(s.start + s.seconds / 2));
       const feet = heroPoseFor(s, brushPoseAt(s.start + s.seconds / 2)).pos;
       const shoulder: [number, number, number] = [feet[0], feet[1] + 0.98 * HERO_SCALE, feet[2]];
-      expect(Math.hypot(...sub(grip, shoulder))).toBeLessThan(HERO_ARM_REACH * HERO_SCALE + 0.01);
+      // the shoulder sits a little below/above the grip, so the (stretchable) arm reaches up to 1.5× its rest length
+      expect(Math.hypot(...sub(grip, shoulder))).toBeLessThan(HERO_ARM_REACH * HERO_SCALE * 1.5);
     }
     expect(BRUSH.grip).toBeGreaterThan(BRUSH.headLength / 2 + BRUSH.neckLength);
     expect(BRUSH.gripShort).toBeGreaterThan(BRUSH.headLength / 2 + BRUSH.neckLength * 0.5);

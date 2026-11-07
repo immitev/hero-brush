@@ -14,7 +14,9 @@ import type { HeroPack, Suit } from '../heroes';
 import { HeroModel, createHeroAnim, type HeroAnim } from './heroes/HeroModel';
 
 /** How much the body turns towards the camera while brushing (0 = face the teeth, 1 = face camera). */
-const BRUSH_FACE_CAMERA = 0.6;
+const BRUSH_FACE_CAMERA = 0.65;
+/** The body never turns more than this (radians) away from the camera while playing. */
+const MAX_AWAY_FROM_CAMERA = 1.2;
 
 const fwd = new THREE.Vector3();
 const right = new THREE.Vector3();
@@ -48,18 +50,25 @@ export function HeroRig({ hero, suit }: { hero: HeroPack; suit: Suit }) {
     a.speed = rt.paused ? 0 : rt.hero.speed;
     a.holdBrush = false;
 
-    if (rt.phase === 'playing') {
+    if (rt.phase === 'playing' || rt.phase === 'countdown') {
       const h = rt.hero;
       desired.set(h.pos[0], h.pos[1], h.pos[2]);
       g.position.lerp(desired, 1 - Math.exp(-dt * 14));
       camDir.copy(cam.position).sub(g.position);
       const camYaw = Math.atan2(camDir.x, camDir.z);
       const targetYaw = Math.atan2(h.facing[0], h.facing[2]);
-      const bodyYaw = h.state === 'brush' ? lerpAngle(targetYaw, camYaw, BRUSH_FACE_CAMERA) : targetYaw;
+      let bodyYaw = rt.phase === 'countdown' ? camYaw : lerpAngle(targetYaw, camYaw, BRUSH_FACE_CAMERA);
+      const away = angleDiff(camYaw, bodyYaw);
+      if (Math.abs(away) > MAX_AWAY_FROM_CAMERA) bodyYaw = camYaw + Math.sign(away) * MAX_AWAY_FROM_CAMERA;
       yaw.current = lerpAngle(yaw.current, bodyYaw, 1 - Math.exp(-dt * 8));
-      const grip = gripPoint(rt.brush);
-      hand.current.set(grip[0], grip[1], grip[2]);
-      a.handTarget = hand.current;
+      if (rt.phase === 'playing') {
+        const grip = gripPoint(rt.brush);
+        hand.current.set(grip[0], grip[1], grip[2]);
+        a.handTarget = hand.current;
+      } else {
+        a.handTarget = null;
+        a.holdBrush = true;
+      }
       g.scale.setScalar(HERO_SCALE);
     } else {
       // intro / victory: centre stage, facing the camera
@@ -71,7 +80,7 @@ export function HeroRig({ hero, suit }: { hero: HeroPack; suit: Suit }) {
       camDir.copy(cam.position).sub(g.position);
       yaw.current = lerpAngle(yaw.current, Math.atan2(camDir.x, camDir.z), 1 - Math.exp(-dt * 4));
       a.handTarget = null;
-      a.holdBrush = rt.phase !== 'victory';
+      a.holdBrush = false;
       g.scale.setScalar(0.9);
     }
     g.rotation.y = yaw.current;

@@ -125,56 +125,94 @@ function gumMaterial(color: string): THREE.MeshStandardMaterial {
   return new THREE.MeshStandardMaterial({ color, roughness: 0.6, metalness: 0, envMapIntensity: 0.3 });
 }
 
-function Gums({ highQuality }: { highQuality: boolean }) {
-  const gum = useMemo(() => gumMaterial(GUM), []);
-  const deep = useMemo(() => gumMaterial(GUM_DEEP), []);
-  const margin = useMemo(() => gumMaterial(GUM_MARGIN), []);
-  const seg = highQuality ? 64 : 40;
-  const upper = useMemo(() => new THREE.TubeGeometry(archCurve(UPPER_GUM_Y + 0.34, 1.0), seg, 0.58, 18, false), [seg]);
-  const lower = useMemo(() => new THREE.TubeGeometry(archCurve(LOWER_GUM_Y - 0.34, 1.0), seg, 0.58, 18, false), [seg]);
-  const upperInner = useMemo(() => new THREE.TubeGeometry(archCurve(UPPER_GUM_Y + 0.55, 0.78), 40, 0.5, 12, false), []);
-  const lowerInner = useMemo(() => new THREE.TubeGeometry(archCurve(LOWER_GUM_Y - 0.55, 0.78), 40, 0.5, 12, false), []);
-  // scalloped gumline: a collar around every tooth neck + papillae between neighbours
-  const collars = useMemo(
-    () =>
-      TEETH.map((t) => {
-        const gs = gumSign(t);
-        const y = t.pos[1] + gs * (t.size[1] / 2 - 0.1);
-        const q = new THREE.Quaternion().setFromUnitVectors(new THREE.Vector3(0, 0, 1), new THREE.Vector3(0, 1, 0));
-        const yaw = new THREE.Quaternion().setFromAxisAngle(new THREE.Vector3(0, 1, 0), Math.atan2(t.outward[0], t.outward[2]));
-        return { pos: [t.pos[0], y, t.pos[2]] as [number, number, number], quat: yaw.multiply(q), scale: [t.size[0] / 2 + 0.08, t.size[2] / 2 + 0.08, 1] as [number, number, number] };
-      }),
-    [],
-  );
-  const papillae = useMemo(() => {
-    const out: [number, number, number][] = [];
-    for (const row of ['upper', 'lower'] as const) {
-      const teeth = TEETH.filter((t) => t.row === row);
-      for (let i = 0; i + 1 < teeth.length; i++) {
-        const a = teeth[i];
-        const b = teeth[i + 1];
-        const gs = gumSign(a);
-        out.push([(a.pos[0] + b.pos[0]) / 2, (a.pos[1] + b.pos[1]) / 2 + gs * (a.size[1] / 2 - 0.02), (a.pos[2] + b.pos[2]) / 2]);
-      }
+/**
+ * One continuous gum per arch: a swept cross-section whose lower edge is a
+ * scalloped margin hugging every tooth neck (high over the crowns, dipping
+ * into a papilla between neighbours). Smooth normals; the margin itself is a
+ * slightly darker vertex-coloured line.
+ */
+function gumBandGeometry(row: 'upper' | 'lower', segments: number): THREE.BufferGeometry {
+  const teeth = TEETH.filter((t) => t.row === row);
+  const gs = row === 'upper' ? 1 : -1;
+  const gumY = row === 'upper' ? UPPER_GUM_Y : LOWER_GUM_Y;
+  const span = (190 * Math.PI) / 180;
+  const gapW = span / 12;
+  const gaps: number[] = [];
+  for (let i = 0; i + 1 < teeth.length; i++) gaps.push((teeth[i].angle + teeth[i + 1].angle) / 2);
+  const papilla = (a: number) => {
+    let b = 0;
+    for (const g of gaps) b += Math.exp(-(((a - g) / (0.38 * gapW)) ** 2));
+    return Math.min(1, b);
+  };
+  const nearest = (a: number) => teeth.reduce((best, t) => (Math.abs(t.angle - a) < Math.abs(best.angle - a) ? t : best), teeth[0]);
+  const marginBase = gs * 0.08; // just over the crown neck
+  const marginDip = gs * 0.3; // papilla hangs this far towards the crowns
+  const P = 9;
+  const positions: number[] = [];
+  const colors: number[] = [];
+  const indices: number[] = [];
+  const gum = new THREE.Color(GUM);
+  const marginCol = new THREE.Color(GUM_MARGIN);
+  const c = new THREE.Color();
+  for (let i = 0; i <= segments; i++) {
+    const a = -span / 2 + (span * i) / segments;
+    const ox = Math.sin(a) / ARCH_RX;
+    const oz = Math.cos(a) / ARCH_RZ;
+    const ol = Math.hypot(ox, oz);
+    const nx = ox / ol;
+    const nz = oz / ol;
+    const bx = ARCH_RX * Math.sin(a);
+    const bz = ARCH_RZ * Math.cos(a);
+    const t = nearest(a);
+    const halfD = t.size[2] / 2;
+    const dip = papilla(a);
+    const yMargin = gumY + marginBase - marginDip * dip;
+    // cross-section: outer margin -> outer bulge -> ridge -> inner bulge -> inner margin
+    const profile: [number, number][] = [
+      [halfD + 0.03, yMargin],
+      [halfD + 0.2, gumY + gs * 0.18],
+      [0.62, gumY + gs * 0.5],
+      [0.45, gumY + gs * 0.82],
+      [0, gumY + gs * 0.98],
+      [-0.42, gumY + gs * 0.82],
+      [-0.56, gumY + gs * 0.5],
+      [-(halfD + 0.18), gumY + gs * 0.18],
+      [-(halfD + 0.03), yMargin],
+    ];
+    profile.forEach(([r, y], j) => {
+      positions.push(bx + nx * r, y, bz + nz * r);
+      const k = j === 0 || j === P - 1 ? 0 : j === 1 || j === P - 2 ? 0.55 : 1;
+      c.copy(marginCol).lerp(gum, k);
+      colors.push(c.r, c.g, c.b);
+    });
+  }
+  for (let i = 0; i < segments; i++) {
+    for (let j = 0; j < P - 1; j++) {
+      const a0 = i * P + j;
+      const a1 = a0 + 1;
+      const b0 = (i + 1) * P + j;
+      const b1 = b0 + 1;
+      indices.push(a0, b0, a1, a1, b0, b1);
     }
-    return out;
-  }, []);
+  }
+  const geo = new THREE.BufferGeometry();
+  geo.setAttribute('position', new THREE.Float32BufferAttribute(positions, 3));
+  geo.setAttribute('color', new THREE.Float32BufferAttribute(colors, 3));
+  geo.setIndex(indices);
+  geo.computeVertexNormals();
+  return geo;
+}
+
+function Gums({ highQuality }: { highQuality: boolean }) {
+  const band = useMemo(() => new THREE.MeshStandardMaterial({ vertexColors: true, roughness: 0.5, metalness: 0, envMapIntensity: 0.35, side: THREE.DoubleSide }), []);
+  const deep = useMemo(() => gumMaterial(GUM_DEEP), []);
+  const seg = highQuality ? 220 : 140;
+  const upper = useMemo(() => gumBandGeometry('upper', seg), [seg]);
+  const lower = useMemo(() => gumBandGeometry('lower', seg), [seg]);
   return (
     <group>
-      <mesh geometry={upper} material={gum} />
-      <mesh geometry={lower} material={gum} />
-      <mesh geometry={upperInner} material={deep} />
-      <mesh geometry={lowerInner} material={deep} />
-      {collars.map((c, i) => (
-        <mesh key={`c${i}`} position={c.pos} quaternion={c.quat} scale={c.scale} material={margin}>
-          <torusGeometry args={[1, 0.3, 8, 22]} />
-        </mesh>
-      ))}
-      {papillae.map((p, i) => (
-        <mesh key={`p${i}`} position={p} material={gum}>
-          <sphereGeometry args={[0.16, 12, 10]} />
-        </mesh>
-      ))}
+      <mesh geometry={upper} material={band} />
+      <mesh geometry={lower} material={band} />
       {/* palate */}
       <mesh position={[0, UPPER_GUM_Y + 1.1, -0.6]} scale={[2.9, 0.9, 2.9]} material={deep}>
         <sphereGeometry args={[1, 28, 18, 0, Math.PI * 2, 0, Math.PI / 2]} />
