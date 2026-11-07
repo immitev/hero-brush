@@ -158,7 +158,7 @@ function stopForGroup(seg: Segment, teeth: ToothDef[], index: number, count: num
   const along = teeth.map((t) => dot(sub(surfaceCenter(t, surface), point), tangent));
   // capped so the hero never has to run along the row; whatever the head misses is
   // finished when the stop ends (see simulation.finishStop)
-  const driftHalf = Math.min(0.45, Math.max(0, (Math.max(...along) - Math.min(...along)) / 2 - 0.05));
+  const driftHalf = Math.min(0.58, Math.max(0, (Math.max(...along) - Math.min(...along)) / 2 + 0.1));
 
   const side = scale(tangent, heroSide);
   // the hero stands beside the brush: mostly along the row (handle side) and only a little

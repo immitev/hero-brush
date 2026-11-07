@@ -56,23 +56,73 @@ function kindForCol(col: number): ToothKind {
 }
 
 const SIZES: Record<ToothKind, Vec3> = {
-  molar: [0.82, 0.78, 0.8],
+  molar: [0.76, 0.78, 0.8],
   premolar: [0.62, 0.84, 0.66],
   canine: [0.5, 0.98, 0.56],
   incisor: [0.54, 0.96, 0.4],
 };
 
+/** Arch half-span in radians: the back molars end here. */
+const HALF_SPAN = (86 * Math.PI) / 180;
+
+/** Arc length along the arch ellipse from the midline (a = 0) to parameter a >= 0. */
+function arcLength(a: number): number {
+  const n = 400;
+  let s = 0;
+  for (let i = 0; i < n; i++) {
+    const m = ((i + 0.5) / n) * a;
+    s += Math.hypot(ARCH_RX * Math.cos(m), ARCH_RZ * Math.sin(m));
+  }
+  return (s * a) / n;
+}
+
+/** Inverse of arcLength (bisection). */
+function angleAtArc(s: number): number {
+  let lo = 0;
+  let hi = Math.PI;
+  for (let i = 0; i < 50; i++) {
+    const mid = (lo + hi) / 2;
+    if (arcLength(mid) < s) lo = mid;
+    else hi = mid;
+  }
+  return (lo + hi) / 2;
+}
+
+function baseSize(col: number): Vec3 {
+  const size = SIZES[kindForCol(col)];
+  // central incisors are a little bigger than laterals
+  return col === 5 || col === 6 ? [size[0] * 1.1, size[1] * 1.04, size[2]] : size;
+}
+
+/**
+ * Teeth sit side by side along the arch like real ones: each tooth gets an
+ * arc-length slot equal to its width, so neighbours touch (no gaps), and the
+ * widths are scaled so the row exactly fills the arch.
+ */
+function rowLayout(): { angle: number; widthScale: number }[] {
+  const half = TEETH_PER_ROW / 2;
+  const widths = Array.from({ length: half }, (_, i) => baseSize(half + i)[0]); // midline -> back
+  const total = widths.reduce((a, b) => a + b, 0);
+  const widthScale = arcLength(HALF_SPAN) / total;
+  const right: number[] = [];
+  let s = 0;
+  for (const w of widths) {
+    right.push(angleAtArc(s + (w * widthScale) / 2));
+    s += w * widthScale;
+  }
+  const angles = [...right.map((a) => -a).reverse(), ...right];
+  return angles.map((angle) => ({ angle, widthScale }));
+}
+
 function buildTeeth(): ToothDef[] {
   const out: ToothDef[] = [];
-  const span = 184; // degrees covered by the arch
+  const layout = rowLayout();
   for (const row of ['upper', 'lower'] as const) {
     for (let col = 0; col < TEETH_PER_ROW; col++) {
-      const angle = -span / 2 + ((col + 0.5) * span) / TEETH_PER_ROW; // -92 .. 92
-      const a = (angle * Math.PI) / 180;
+      const a = layout[col].angle;
       const kind = kindForCol(col);
-      const size = SIZES[kind];
-      // central incisors are a little bigger than laterals
-      const sz: Vec3 = kind === 'incisor' && (col === 5 || col === 6) ? [size[0] * 1.1, size[1] * 1.04, size[2]] : size;
+      const b = baseSize(col);
+      const sz: Vec3 = [b[0] * layout[col].widthScale, b[1], b[2]];
       const x = ARCH_RX * Math.sin(a);
       const z = ARCH_RZ * Math.cos(a);
       const nx = Math.sin(a) / ARCH_RX;
