@@ -145,7 +145,7 @@ function stepHero(rt: Runtime, hero: HeroPack, t: number, dt: number): void {
       const perch = { pos: target.pos, normal: target.normal };
       if (target.id !== h.standoffFor) {
         h.standoffFor = target.id;
-        h.standoffSide = pickStandoffSide(perch, rt.camPos, rt.aspect, cameraPoseForZone(rt.zoneIndex));
+        h.standoffSide = pickStandoffSide(perch, rt.camPos, rt.aspect, cameraPoseForZone(rt.zoneIndex, rt.aspect));
       }
       dest = scrubStandoff(perch, h.standoffSide);
       aim = target.pos;

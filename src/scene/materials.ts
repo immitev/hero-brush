@@ -37,7 +37,7 @@ export class ToothMaterial extends THREE.MeshToonMaterial {
     uTime: { value: 0 },
     uSpotColor: { value: new THREE.Color('#e6d6a3') },
     uDirtyColor: { value: new THREE.Color('#f6efd8') },
-    uCleanColor: { value: new THREE.Color('#fbfbff') },
+    uCleanColor: { value: new THREE.Color('#f2f4f9') },
   };
 
   constructor() {
@@ -115,13 +115,13 @@ export class ToothMaterial extends THREE.MeshToonMaterial {
            float hbSpec = pow(max(dot(hbN, hbHalf), 0.0), 48.0);
            float hbRim = pow(1.0 - max(dot(hbN, hbViewW), 0.0), 3.0);
            float gloss = mix(0.3, 1.0, hbClean);
-           totalEmissiveRadiance += vec3(hbSpec * 0.4 * gloss + hbRim * 0.05 * gloss);
+           totalEmissiveRadiance += vec3(hbSpec * 0.28 * gloss + hbRim * 0.04 * gloss);
            float tw = hb_hash(floor(vObjPos * 11.0) + floor(uTime * 3.0));
            float sp = step(0.982, tw) * smoothstep(0.8, 1.0, hbClean);
            totalEmissiveRadiance += vec3(1.6, 1.6, 1.8) * sp;`,
         );
     };
-    this.customProgramCacheKey = () => 'hero-brush-tooth-v4';
+    this.customProgramCacheKey = () => 'hero-brush-tooth-v5';
   }
 }
 

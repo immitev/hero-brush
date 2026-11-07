@@ -168,10 +168,11 @@ export function Arena() {
 export function Lights() {
   return (
     <>
-      <hemisphereLight args={['#fff6fa', '#d98ab0', 0.95]} />
-      <directionalLight position={[4, 8, 6]} intensity={1.25} color="#fff7ec" />
-      <directionalLight position={[-6, 2, 4]} intensity={0.55} color="#cfe6ff" />
-      <pointLight position={[0, 0.4, 3]} intensity={1.4} distance={10} color="#ffe3ef" />
+      {/* kept well below clipping so toon-shaded teeth never flatten to pure white */}
+      <hemisphereLight args={['#fff6fa', '#d98ab0', 0.6]} />
+      <directionalLight position={[4, 8, 6]} intensity={0.75} color="#fff7ec" />
+      <directionalLight position={[-6, 2, 4]} intensity={0.35} color="#cfe6ff" />
+      <pointLight position={[0, -0.6, 5]} intensity={0.5} distance={12} color="#ffe3ef" />
     </>
   );
 }

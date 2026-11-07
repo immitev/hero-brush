@@ -35,7 +35,7 @@ export function CameraRig() {
       pose = BOSS_CAMERA;
       follow = 0.12;
     } else {
-      pose = cameraPoseForZone(rt.zoneIndex);
+      pose = cameraPoseForZone(rt.zoneIndex, aspect);
       follow = 0.3;
     }
     targetPos.set(pose.pos[0], pose.pos[1], pose.pos[2]);

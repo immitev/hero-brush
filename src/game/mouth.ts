@@ -10,7 +10,10 @@ export type Vec3 = [number, number, number];
 export const ARCH_RX = 3.1; // half-width of the dental arch
 export const ARCH_RZ = 2.7; // depth of the dental arch (front at +z)
 export const UPPER_GUM_Y = 1.15;
-export const LOWER_GUM_Y = -1.15;
+/** The jaw is wide open ("open wide!") so the camera can look between the rows. */
+export const LOWER_GUM_Y = -1.9;
+/** Vertical centre of the gap between the two rows. */
+export const GAP_CENTER_Y = (UPPER_GUM_Y + LOWER_GUM_Y) / 2; // -0.375
 export const TEETH_PER_ROW = 12;
 
 export type ToothKind = 'molar' | 'premolar' | 'canine' | 'incisor';
@@ -150,7 +153,7 @@ export function scrubStandoff(perch: Perch, sideSign = 1): Vec3 {
     // height (the brush arm pitches up/down towards the monster), never inside the row
     const side = 0.95 * sideSign;
     const front = 0.3;
-    const y = n[1] < 0 ? perch.pos[1] - 0.95 : perch.pos[1] + 0.05;
+    const y = n[1] < 0 ? perch.pos[1] - 0.85 : perch.pos[1] + 0.05;
     return [perch.pos[0] + n[0] * front + s[0] * side, y, perch.pos[2] + n[2] * front + s[2] * side];
   }
   const front = 0.45;
@@ -175,7 +178,7 @@ export function zoneHome(zoneIndex: number): Vec3 {
     const oz = Math.cos(a);
     return [c[0] + ox * 0.9, up ? c[1] - 1.5 : c[1] + 0.6, c[2] + oz * 0.9];
   }
-  return up ? [0.8, -1.0, 2.6] : [0.8, 0.3, 2.6];
+  return up ? [0.8, GAP_CENTER_Y - 0.35, 2.6] : [0.8, GAP_CENTER_Y + 0.25, 2.6];
 }
 
 export function zoneCenter(zoneIndex: number): Vec3 {
@@ -195,10 +198,16 @@ export interface CameraPose {
   target: Vec3;
 }
 
-/** Camera standing point for each zone (portrait-tuned). */
-export function cameraPoseForZone(zoneIndex: number): CameraPose {
+export const DEFAULT_ASPECT = 16 / 9;
+
+/**
+ * Camera standing point for each zone. `aspect` matters for the inside zones:
+ * a narrow portrait view needs the camera further back to fit the row.
+ */
+export function cameraPoseForZone(zoneIndex: number, aspect: number = DEFAULT_ASPECT): CameraPose {
   const z = ZONES[zoneIndex];
   const up = z.row === 'upper';
+  const c = zoneCenter(zoneIndex);
   if (z.surface === 'outside') {
     const sideSign = z.side === 'left' ? -1 : 1;
     const a = (sideSign * 42 * Math.PI) / 180;
@@ -206,22 +215,24 @@ export function cameraPoseForZone(zoneIndex: number): CameraPose {
     const oz = Math.cos(a);
     const cx = ARCH_RX * ox * 0.9;
     const cz = ARCH_RZ * oz * 0.9;
-    const ty = up ? 0.5 : -0.5;
+    const ty = up ? c[1] - 0.25 : c[1] + 0.25;
     const dist = 5.2;
     return {
       pos: [cx + ox * dist, ty + (up ? 0.7 : -0.7), cz + oz * dist],
       target: [cx * 0.85, ty, cz * 0.85],
     };
   }
-  // inside: camera in front of the open mouth, low (or high) and looking at the
-  // chewing surfaces and inner faces of the whole row
-  return up
-    ? { pos: [0, -1.5, 5.6], target: [0, 0.9, 0.2] }
-    : { pos: [0, 1.5, 5.6], target: [0, -0.9, 0.2] };
+  // inside: camera in front of the wide-open mouth, a little below (or above)
+  // the gap, looking through the gap at the chewing surfaces and inner walls
+  // of the row; the sight line passes between the front teeth, never through them
+  const dist = aspect < 1 ? 7.0 : 5.4;
+  const camY = up ? GAP_CENTER_Y - 0.75 : GAP_CENTER_Y + 0.7;
+  const targetY = up ? UPPER_GUM_Y - 0.6 : LOWER_GUM_Y + 0.55;
+  return { pos: [0, camY, dist], target: [0, targetY, -0.2] };
 }
 
 /** The Cavity King floats in the mouth opening, in front of the teeth. */
-export const BOSS_POSITION: Vec3 = [0.45, 0.1, 3.2];
+export const BOSS_POSITION: Vec3 = [0.45, GAP_CENTER_Y + 0.1, 3.2];
 
 /** Boss radius for a given health 0..1 (it shrinks under the foam). */
 export function bossRadius(health: number): number {
@@ -239,5 +250,5 @@ export function bossStandoff(bossPos: Vec3, health: number): Vec3 {
   return [bossPos[0] - (r + 0.75), bossPos[1] - 0.45, bossPos[2] + 0.35];
 }
 
-export const BOSS_CAMERA: CameraPose = { pos: [0, 0.4, 8.2], target: [0, 0.1, 1.5] };
-export const INTRO_CAMERA: CameraPose = { pos: [0, 0.4, 9], target: [0, 0.2, 0] };
+export const BOSS_CAMERA: CameraPose = { pos: [0, GAP_CENTER_Y + 0.4, 8.2], target: [0, GAP_CENTER_Y + 0.1, 1.5] };
+export const INTRO_CAMERA: CameraPose = { pos: [0, GAP_CENTER_Y + 0.5, 9], target: [0, GAP_CENTER_Y + 0.2, 0] };
