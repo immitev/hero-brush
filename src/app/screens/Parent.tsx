@@ -3,7 +3,7 @@ import { setVolumes } from '../../audio/engine';
 import { setVoiceLevel, setVoiceMuted } from '../../audio/voice';
 import { useStore } from '../../game/store';
 import { formatClock } from '../../game/segments';
-import { LANGS, LANG_NAME, useT } from '../../i18n';
+import { ENABLED_LANGS, LANG_NAME, useT } from '../../i18n';
 import { StarIcon } from '../components/Icons';
 import { Gate } from './ParentGate';
 
@@ -59,16 +59,18 @@ export function Parent() {
 
           <section className="card">
             <h3>{t('parent.settings')}</h3>
-            <div className="row">
-              <span>{t('parent.language')}</span>
-              <div className="segmented no-caps">
-                {LANGS.map((l) => (
-                  <button key={l} lang={l} className={settings.lang === l ? 'active' : ''} onClick={() => updateSettings({ lang: l })}>
-                    {LANG_NAME[l]}
-                  </button>
-                ))}
+            {ENABLED_LANGS.length > 1 && (
+              <div className="row">
+                <span>{t('parent.language')}</span>
+                <div className="segmented no-caps">
+                  {ENABLED_LANGS.map((l) => (
+                    <button key={l} lang={l} className={settings.lang === l ? 'active' : ''} onClick={() => updateSettings({ lang: l })}>
+                      {LANG_NAME[l]}
+                    </button>
+                  ))}
+                </div>
               </div>
-            </div>
+            )}
             <label className="row">
               <span>{t('parent.musicVolume')}</span>
               <input

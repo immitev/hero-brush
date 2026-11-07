@@ -3,7 +3,7 @@ import { unlockAudio } from '../../audio/engine';
 import { sfx } from '../../audio/sfx';
 import { primeSpeech } from '../../audio/voice';
 import { useStore } from '../../game/store';
-import { LANGS, LANG_LABEL, LANG_NAME, useT } from '../../i18n';
+import { ENABLED_LANGS, LANG_LABEL, LANG_NAME, useT } from '../../i18n';
 import { useInstallPrompt } from '../../pwa/install';
 import { FlameIcon, StarIcon } from '../components/Icons';
 
@@ -52,8 +52,9 @@ export function Hub() {
           <span>{streak.current}</span>
           <small>{tn('hub.days', streak.current)}</small>
         </div>
+        {ENABLED_LANGS.length > 1 ? (
         <div className="lang-toggle" role="group" aria-label={t('hub.langAria')}>
-          {LANGS.map((l) => (
+          {ENABLED_LANGS.map((l) => (
             <button
               key={l}
               className={l === lang ? 'active' : ''}
@@ -69,12 +70,13 @@ export function Hub() {
             </button>
           ))}
         </div>
+        ) : null}
       </header>
 
       <div className="hub-title">
         <h1>
-          <span>HERO</span>
-          <span>BRUSH</span>
+          <span>{t('hub.title1')}</span>
+          <span>{t('hub.title2')}</span>
         </h1>
         <p>{streak.brushedToday ? t('hub.taglineBrushed') : t('hub.tagline')}</p>
       </div>

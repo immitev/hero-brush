@@ -14,10 +14,18 @@ export function detectLang(tags: readonly (string | undefined)[] | undefined): L
 }
 
 export function browserLang(): Lang {
-  if (typeof navigator === 'undefined') return 'en';
-  return detectLang([navigator.languages?.[0], navigator.language]);
+  if (typeof navigator === 'undefined') return ENABLED_LANGS[0];
+  const detected = detectLang([navigator.languages?.[0], navigator.language]);
+  return ENABLED_LANGS.includes(detected) ? detected : ENABLED_LANGS[0];
 }
 
 export function isLang(v: unknown): v is Lang {
   return v === 'en' || v === 'bg';
+}
+
+/** Languages offered in this build (the public build is Bulgarian-only; English data is kept for later). */
+export const ENABLED_LANGS: readonly Lang[] = ['bg'];
+
+export function isEnabledLang(v: unknown): v is Lang {
+  return isLang(v) && ENABLED_LANGS.includes(v);
 }

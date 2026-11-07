@@ -1,6 +1,6 @@
 import Dexie, { type EntityTable } from 'dexie';
 import type { SessionRecord } from '../game/scoring';
-import { browserLang, isLang, type Lang } from '../i18n/lang';
+import { browserLang, isEnabledLang, type Lang } from '../i18n/lang';
 
 export type QualityTier = 'low' | 'high';
 
@@ -52,7 +52,7 @@ export async function loadSettings(): Promise<Settings> {
   try {
     const row = await db.settings.get('settings');
     const merged = { ...DEFAULT_SETTINGS, ...(row?.value ?? {}) };
-    if (!isLang(merged.lang)) merged.lang = DEFAULT_SETTINGS.lang;
+    if (!isEnabledLang(merged.lang)) merged.lang = DEFAULT_SETTINGS.lang;
     return merged;
   } catch {
     return { ...DEFAULT_SETTINGS };

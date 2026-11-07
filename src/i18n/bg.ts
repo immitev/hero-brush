@@ -12,6 +12,8 @@ export const bg: Messages = {
   'hub.goAria': 'Давай! Започни да четкаш',
   'hub.install': 'Инсталирай',
   'hub.parents': 'За родители',
+  'hub.title1': 'СУПЕР',
+  'hub.title2': 'ЧЕТКА',
   'hub.langAria': 'Език',
 
   'select.back': 'Назад',
@@ -21,11 +23,11 @@ export const bg: Messages = {
   'select.lockedHint': 'Събери {stars} звезди с този герой, за да отключиш',
   'select.start': 'Избирам {hero}!',
 
-  'hero.ironman.name': 'Железния човек',
+  'hero.ironman.name': 'Железарко',
   'hero.ironman.tagline': 'Долита и показва идеални кръгчета по венеца.',
-  'hero.spiderman.name': 'Спайдърмен',
+  'hero.spiderman.name': 'Паячко',
   'hero.spiderman.tagline': 'Долита на паяжина и измита всяко предно зъбче.',
-  'hero.batman.name': 'Батман',
+  'hero.batman.name': 'Прилепчо',
   'hero.batman.tagline': 'Спуска се със спокойна и нежна техника.',
 
   'suit.ironman.classic': 'Класически',

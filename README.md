@@ -9,9 +9,12 @@ Status: **playable MVP** — a two-minute brushing lesson with a superhero coach
 M0-M6 of [PLAN.md](PLAN.md), with the monster/boss gameplay replaced by technique teaching;
 no brush detection, sticker book, profiles or push reminders yet.)
 
-Private family project. The hero characters belong to their trademark owners and must be replaced
-with original heroes before any public release. Everything in this repo is procedurally generated:
-no official art, logos or models are used.
+Play it: **https://immitev.github.io/hero-brush/** (in Bulgarian, as «Супер Четка»).
+
+The public build is Bulgarian-only (`ENABLED_LANGS` in `src/i18n/lang.ts`; the English texts and
+voices are kept in the repo) and its heroes are the original characters Железарко, Паячко and
+Прилепчо. Everything is procedurally generated: no official art, logos or models are used. Pushing
+to `main` deploys to GitHub Pages via `.github/workflows/pages.yml`.
 
 ## Run it
 

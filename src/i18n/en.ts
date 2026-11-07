@@ -13,6 +13,8 @@ export const en = {
   'hub.goAria': 'Go! Start brushing',
   'hub.install': 'Install app',
   'hub.parents': 'Parents',
+  'hub.title1': 'HERO',
+  'hub.title2': 'BRUSH',
   'hub.langAria': 'Language',
 
   'select.back': 'Back',
