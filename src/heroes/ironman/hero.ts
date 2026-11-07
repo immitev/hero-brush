@@ -3,7 +3,6 @@ import type { HeroPack } from '../types';
 export const ironman: HeroPack = {
   id: 'ironman',
   name: 'Iron Man',
-  tagline: 'Jets from tooth to tooth and power-scrubs the gunk.',
   movement: 'hover',
   travelSpeed: 7,
   suits: [
@@ -30,12 +29,5 @@ export const ironman: HeroPack = {
       },
     },
   ],
-  voice: {
-    select: 'Suit up. Let us polish those teeth.',
-    start: 'Jet brush online. Brush time!',
-    midway: 'Halfway there. Keep brushing!',
-    boss: 'The Cavity King! Full scrub power!',
-    victory: 'Sparkling clean. Mission complete!',
-  },
   ui: { bg: '#5a0f1f', fg: '#ffd166' },
 };

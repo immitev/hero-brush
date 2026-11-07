@@ -1,0 +1,24 @@
+{
+  "languages": {
+    "en": {
+      "xmlLang": "en-US",
+      "silence": { "leading": "50ms", "tailing": "150ms" },
+      "speakers": {
+        "narrator": { "voice": "en-US-JennyNeural", "locale": "en-US", "style": "cheerful", "styledegree": 1.2, "rate": "-2%", "pitch": "+4%", "fallback": { "pitch": 1.2, "rate": 1.0 } },
+        "ironman": { "voice": "en-US-Andrew:DragonHDLatestNeural", "locale": "en-US", "fallback": { "pitch": 0.95, "rate": 1.05 } },
+        "spiderman": { "voice": "en-US-BrianNeural", "locale": "en-US", "rate": "+10%", "pitch": "+8%", "fallback": { "pitch": 1.35, "rate": 1.15 } },
+        "batman": { "voice": "en-US-DavisNeural", "locale": "en-US", "rate": "-12%", "pitch": "-14%", "fallback": { "pitch": 0.6, "rate": 0.85 } }
+      }
+    },
+    "bg": {
+      "xmlLang": "bg-BG",
+      "silence": { "leading": "50ms", "tailing": "150ms" },
+      "speakers": {
+        "narrator": { "voice": "bg-BG-KalinaNeural", "locale": "bg-BG", "rate": "-3%", "pitch": "+5%", "fallback": { "pitch": 1.2, "rate": 0.95 } },
+        "ironman": { "voice": "en-US-AndrewMultilingualNeural", "locale": "en-US", "fallback": { "pitch": 0.95, "rate": 1.0 } },
+        "spiderman": { "voice": "bg-BG-BorislavNeural", "locale": "bg-BG", "rate": "+14%", "pitch": "+14%", "fallback": { "pitch": 1.35, "rate": 1.15 } },
+        "batman": { "voice": "bg-BG-BorislavNeural", "locale": "bg-BG", "rate": "-14%", "pitch": "-16%", "fallback": { "pitch": 0.6, "rate": 0.85 } }
+      }
+    }
+  }
+}

@@ -38,7 +38,7 @@ export interface SessionResult {
   slot: Slot;
   /** Whether the other slot of the same day was already completed. */
   otherSlotDone: boolean;
-  unlockedSuit: { heroId: string; suitId: string; suitName: string } | null;
+  unlockedSuit: { heroId: string; suitId: string } | null;
   streak: StreakInfo;
 }
 
@@ -164,7 +164,7 @@ export const useStore = create<AppState>((set, get) => ({
     let unlockedSuit: SessionResult['unlockedSuit'] = null;
     hero.suits.forEach((suit, i) => {
       if (!unlockedBefore[i] && isSuitUnlocked(next, heroId, i)) {
-        unlockedSuit = { heroId, suitId: suit.id, suitName: suit.name };
+        unlockedSuit = { heroId, suitId: suit.id };
       }
     });
     const streak = computeStreak(next);
@@ -175,7 +175,10 @@ export const useStore = create<AppState>((set, get) => ({
 
   resetAllData: async () => {
     await clearAllData();
-    set({ sessions: [], streak: EMPTY_STREAK, totalStars: 0, settings: { ...DEFAULT_SETTINGS }, lastResult: null });
+    // keep the language the parent chose; everything else goes back to defaults
+    const settings = { ...DEFAULT_SETTINGS, lang: get().settings.lang };
+    set({ sessions: [], streak: EMPTY_STREAK, totalStars: 0, settings, lastResult: null });
+    void saveSettings(settings);
   },
 
   effectiveQuality: () => (get().forcedLowQuality ? 'low' : get().settings.quality),

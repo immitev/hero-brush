@@ -25,7 +25,8 @@ export default defineConfig({
         ],
       },
       workbox: {
-        globPatterns: ['**/*.{js,css,html,png,svg,ico,woff2,webmanifest}'],
+        // voice/: build-time neural TTS lines + their manifest (scripts/gen-voices.mjs)
+        globPatterns: ['**/*.{js,css,html,png,svg,ico,woff2,webmanifest}', 'voice/**/*.{mp3,json}'],
         maximumFileSizeToCacheInBytes: 6 * 1024 * 1024,
         navigateFallback: '/index.html',
         cleanupOutdatedCaches: true,
@@ -43,6 +44,6 @@ export default defineConfig({
   test: {
     environment: 'node',
     globals: true,
-    include: ['src/**/*.test.ts'],
+    include: ['src/**/*.test.ts', 'scripts/**/*.test.mjs'],
   },
 });

@@ -1,0 +1,43 @@
+{
+  "narrator": {
+    "count3": { "en": "Three!", "bg": "Три!" },
+    "count2": { "en": "Two!", "bg": "Две!" },
+    "count1": { "en": "One!", "bg": "Едно!" },
+    "go": { "en": "Go!", "bg": "Давай!" },
+    "zone0": { "en": "Top left, outside!", "bg": "Горе вляво, отвън!" },
+    "zone1": { "en": "Switch! Top right, outside!", "bg": "Смяна! Горе вдясно, отвън!" },
+    "zone2": { "en": "Now bottom left, outside!", "bg": "Сега долу вляво, отвън!" },
+    "zone3": { "en": "Switch! Bottom right, outside!", "bg": "Смяна! Долу вдясно, отвън!" },
+    "zone4": { "en": "Open wide! Top teeth, insides and chewing surfaces!", "bg": "Отвори широко! Горните зъбки – отвътре и там, където дъвчем!" },
+    "zone5": { "en": "Last one! Bottom teeth, insides and chewing surfaces!", "bg": "Последно! Долните зъбки – отвътре и там, където дъвчем!" },
+    "praise1": { "en": "Great brushing! Keep going!", "bg": "Страхотно четкаш! Продължавай така!" },
+    "praise2": { "en": "You're a brushing superstar!", "bg": "Ти си истинска звезда на четкането!" },
+    "almost": { "en": "Almost there! Big finish!", "bg": "Почти стигнахме! Още мъничко!" },
+    "goodTry": { "en": "Good try! Next time, brush a little longer.", "bg": "Добър опит! Следващия път четкай малко по-дълго." },
+    "rinse": { "en": "Now spit and rinse!", "bg": "Сега изплюй и изплакни!" }
+  },
+  "ironman": {
+    "select": { "en": "Suit up. Let's polish those teeth!", "bg": "Костюмът е готов. Да лъснем тези зъбки!" },
+    "quip1": { "en": "Jet brush online. Scrubbing!", "bg": "Реактивната четка е включена. Търкаме!" },
+    "quip2": { "en": "Plaque detected. Blasting it with bubbles!", "bg": "Засякох плака! Обстрелвам я с балончета!" },
+    "quip3": { "en": "Genius, billionaire, champion tooth brusher.", "bg": "Гений, милиардер и шампион по четкане." },
+    "boss": { "en": "The Cavity King! Full scrub power!", "bg": "Кралят на кариесите! Пълна мощност!" },
+    "victory": { "en": "Sparkling clean. Mission complete!", "bg": "Блестят! Мисията е изпълнена!" }
+  },
+  "spiderman": {
+    "select": { "en": "Your friendly neighbourhood tooth brusher!", "bg": "Твоят приятел от квартала е тук. Хайде да четкаме!" },
+    "quip1": { "en": "Thwip! Webbing up the gunk!", "bg": "Фшшт! Омотах мръсотията в паяжина!" },
+    "quip2": { "en": "My spider-sense says: more brushing!", "bg": "Паешкото ми чувство казва: още четкане!" },
+    "quip3": { "en": "Swinging to the next tooth! Woo-hoo!", "bg": "Летя към следващото зъбче! Ихууу!" },
+    "boss": { "en": "Whoa, the Cavity King! Let's scrub him up!", "bg": "Леле, Кралят на кариесите! Хайде да го изтъркаме!" },
+    "victory": { "en": "All scrubbed up. Great job, buddy!", "bg": "Всичко е излъскано! Браво, приятел!" }
+  },
+  "batman": {
+    "select": { "en": "I am the night. And it's brush time.", "bg": "Аз съм нощта. И е време за четкане." },
+    "quip1": { "en": "Plaque fears the dark. Keep brushing.", "bg": "Плаката се страхува от мрака. Продължавай." },
+    "quip2": { "en": "Every tooth matters.", "bg": "Всяко зъбче е важно." },
+    "quip3": { "en": "Steady. Small circles. Good.", "bg": "Спокойно. Малки кръгчета. Добре." },
+    "boss": { "en": "The Cavity King. This ends now.", "bg": "Кралят на кариесите. Днес е последният му ден." },
+    "victory": { "en": "Justice served. Teeth clean.", "bg": "Справедливостта победи. Зъбките блестят." }
+  }
+}

@@ -1,3 +1,5 @@
+import type { NarratorLine } from '../voice/lines';
+
 export const ZONE_SECONDS = 20;
 export const ZONE_COUNT = 6;
 export const SESSION_SECONDS = ZONE_SECONDS * ZONE_COUNT; // 120
@@ -11,10 +13,8 @@ export type Surface = 'outside' | 'inside';
 export interface Zone {
   index: number;
   id: string;
-  /** Short label shown in the HUD. */
-  name: string;
-  /** Spoken voice prompt. */
-  voice: string;
+  /** Narrator line (src/voice/lines.json); the HUD label is the i18n key `zone.<id>`. */
+  voice: NarratorLine;
   row: Row;
   side: Side;
   surface: Surface;
@@ -22,12 +22,12 @@ export interface Zone {
 
 /** Order from PLAN.md §2. */
 export const ZONES: readonly Zone[] = [
-  { index: 0, id: 'upper-left-out', name: 'Top left, outside', voice: 'Top left, outside!', row: 'upper', side: 'left', surface: 'outside' },
-  { index: 1, id: 'upper-right-out', name: 'Top right, outside', voice: 'Switch! Top right, outside!', row: 'upper', side: 'right', surface: 'outside' },
-  { index: 2, id: 'lower-left-out', name: 'Bottom left, outside', voice: 'Now bottom left, outside!', row: 'lower', side: 'left', surface: 'outside' },
-  { index: 3, id: 'lower-right-out', name: 'Bottom right, outside', voice: 'Switch! Bottom right, outside!', row: 'lower', side: 'right', surface: 'outside' },
-  { index: 4, id: 'upper-in', name: 'Top insides & chewing', voice: 'Open wide! Top teeth, insides and chewing surfaces!', row: 'upper', side: 'both', surface: 'inside' },
-  { index: 5, id: 'lower-in', name: 'Bottom insides & chewing', voice: 'Last one! Bottom teeth, insides and chewing surfaces!', row: 'lower', side: 'both', surface: 'inside' },
+  { index: 0, id: 'upper-left-out', voice: 'zone0', row: 'upper', side: 'left', surface: 'outside' },
+  { index: 1, id: 'upper-right-out', voice: 'zone1', row: 'upper', side: 'right', surface: 'outside' },
+  { index: 2, id: 'lower-left-out', voice: 'zone2', row: 'lower', side: 'left', surface: 'outside' },
+  { index: 3, id: 'lower-right-out', voice: 'zone3', row: 'lower', side: 'right', surface: 'outside' },
+  { index: 4, id: 'upper-in', voice: 'zone4', row: 'upper', side: 'both', surface: 'inside' },
+  { index: 5, id: 'lower-in', voice: 'zone5', row: 'lower', side: 'both', surface: 'inside' },
 ];
 
 export function clampElapsed(elapsed: number): number {

@@ -3,7 +3,6 @@ import type { HeroPack } from '../types';
 export const batman: HeroPack = {
   id: 'batman',
   name: 'Batman',
-  tagline: 'Glides in from the shadows of the molars to scrub.',
   movement: 'glide',
   travelSpeed: 6.5,
   suits: [
@@ -32,12 +31,5 @@ export const batman: HeroPack = {
       },
     },
   ],
-  voice: {
-    select: 'I am the night. And it is brush time.',
-    start: 'Plaque beware. Begin brushing.',
-    midway: 'Halfway. Do not stop now.',
-    boss: 'The Cavity King. This ends now.',
-    victory: 'Justice served. Teeth clean.',
-  },
   ui: { bg: '#1a1d26', fg: '#f2c14e' },
 };

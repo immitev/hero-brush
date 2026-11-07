@@ -1,7 +1,9 @@
 import { ZONES } from '../../game/zones';
+import { type MessageKey, useT } from '../../i18n';
 
 /** Mini mouth map: six regions, the active one pulses. */
 export function MouthMap({ zoneIndex, size = 96 }: { zoneIndex: number; size?: number }) {
+  const { t } = useT();
   // path for each zone id (upper/lower outer halves + inner arcs)
   const paths: Record<string, string> = {
     'upper-left-out': 'M14 62 A46 46 0 0 1 60 16',
@@ -12,7 +14,7 @@ export function MouthMap({ zoneIndex, size = 96 }: { zoneIndex: number; size?: n
     'lower-in': 'M32 62 A28 28 0 0 0 88 62',
   };
   return (
-    <svg width={size} height={size} viewBox="0 0 120 124" className="mouthmap" aria-label={`Brush: ${ZONES[zoneIndex].name}`}>
+    <svg width={size} height={size} viewBox="0 0 120 124" className="mouthmap" aria-label={t('play.mouthMap', { zone: t(`zone.${ZONES[zoneIndex].id}` as MessageKey) })}>
       <defs>
         <filter id="mm-glow" x="-30%" y="-30%" width="160%" height="160%">
           <feGaussianBlur stdDeviation="2.5" result="b" />

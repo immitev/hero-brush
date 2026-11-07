@@ -1,9 +1,10 @@
 import { useEffect, useState } from 'react';
 import { sfx } from '../../audio/sfx';
-import { speak } from '../../audio/voice';
+import { preloadVoices, say } from '../../audio/voice';
 import { isSuitUnlocked, SUIT_UNLOCK_STARS, starsForHero } from '../../game/scoring';
 import { useStore } from '../../game/store';
 import { HEROES, getSuit } from '../../heroes';
+import { useT } from '../../i18n';
 import { HeroCarousel } from '../../scene/HeroCarousel';
 import { ArrowIcon, LockIcon, StarIcon } from '../components/Icons';
 
@@ -17,10 +18,19 @@ export function HeroSelect() {
   const [index, setIndex] = useState(() => Math.max(0, HEROES.findIndex((h) => h.id === heroId)));
   const hero = HEROES[index];
   const suit = getSuit(hero, suits[hero.id]);
+  const { t, lang, heroName, suitName } = useT();
+  const name = heroName(hero.id);
 
   useEffect(() => {
-    speak(hero.voice.select);
-  }, [hero]);
+    void preloadVoices(
+      HEROES.map((h) => h.id),
+      ['select'],
+    );
+  }, [lang]);
+
+  useEffect(() => {
+    say(hero.id, 'select', 'high');
+  }, [hero, lang]);
 
   const move = (d: number) => {
     sfx.tap();
@@ -39,26 +49,26 @@ export function HeroSelect() {
       <div className="select-overlay">
         <div className="select-top">
           <button className="btn btn-ghost btn-small" onClick={() => go('hub')}>
-            Back
+            {t('select.back')}
           </button>
-          <h2>Pick your hero</h2>
+          <h2>{t('select.title')}</h2>
           <span />
         </div>
 
         <div className="select-arrows">
-          <button className="arrow" onClick={() => move(-1)} aria-label="Previous hero">
+          <button className="arrow" onClick={() => move(-1)} aria-label={t('select.prev')}>
             <ArrowIcon dir="left" />
           </button>
-          <button className="arrow" onClick={() => move(1)} aria-label="Next hero">
+          <button className="arrow" onClick={() => move(1)} aria-label={t('select.next')}>
             <ArrowIcon dir="right" />
           </button>
         </div>
 
         <div className="select-bottom">
           <div className="hero-name" style={{ color: hero.ui.fg }}>
-            {hero.name}
+            {name}
           </div>
-          <div className="hero-tagline">{hero.tagline}</div>
+          <div className="hero-tagline">{t(`hero.${hero.id}.tagline`)}</div>
           <div className="suits">
             {hero.suits.map((s, i) => {
               const unlocked = isSuitUnlocked(sessions, hero.id, i);
@@ -72,10 +82,10 @@ export function HeroSelect() {
                     sfx.tap();
                     selectSuit(hero.id, s.id);
                   }}
-                  title={unlocked ? s.name : `Earn ${SUIT_UNLOCK_STARS * i} stars with ${hero.name} to unlock`}
+                  title={unlocked ? suitName(hero.id, s.id) : t('select.lockedHint', { stars: SUIT_UNLOCK_STARS * i, hero: name })}
                 >
                   <span className="swatch" style={{ background: `linear-gradient(135deg, ${s.palette.primary}, ${s.palette.secondary})` }} />
-                  {s.name}
+                  {suitName(hero.id, s.id)}
                   {!unlocked && (
                     <span className="lock">
                       <LockIcon /> {starsForHero(sessions, hero.id)}/{SUIT_UNLOCK_STARS * i} <StarIcon size={12} />
@@ -86,7 +96,7 @@ export function HeroSelect() {
             })}
           </div>
           <button className="btn btn-big" style={{ background: hero.ui.fg, color: '#1b1340' }} onClick={start}>
-            Brush with {hero.name}!
+            {t('select.start', { hero: name })}
           </button>
         </div>
       </div>

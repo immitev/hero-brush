@@ -1,5 +1,6 @@
 import Dexie, { type EntityTable } from 'dexie';
 import type { SessionRecord } from '../game/scoring';
+import { browserLang, isLang, type Lang } from '../i18n/lang';
 
 export type QualityTier = 'low' | 'high';
 
@@ -7,6 +8,9 @@ export interface Settings {
   musicVolume: number;
   sfxVolume: number;
   voiceMuted: boolean;
+  voiceVolume: number;
+  /** UI + voice language; defaults to the browser language. */
+  lang: Lang;
   quality: QualityTier;
   /** Selected suit per hero id. */
   suits: Record<string, string>;
@@ -17,6 +21,8 @@ export const DEFAULT_SETTINGS: Settings = {
   musicVolume: 0.7,
   sfxVolume: 0.8,
   voiceMuted: false,
+  voiceVolume: 0.9,
+  lang: browserLang(),
   quality: 'high',
   suits: {},
   lastHeroId: 'ironman',
@@ -45,7 +51,9 @@ export const db = new HeroBrushDB();
 export async function loadSettings(): Promise<Settings> {
   try {
     const row = await db.settings.get('settings');
-    return { ...DEFAULT_SETTINGS, ...(row?.value ?? {}) };
+    const merged = { ...DEFAULT_SETTINGS, ...(row?.value ?? {}) };
+    if (!isLang(merged.lang)) merged.lang = DEFAULT_SETTINGS.lang;
+    return merged;
   } catch {
     return { ...DEFAULT_SETTINGS };
   }

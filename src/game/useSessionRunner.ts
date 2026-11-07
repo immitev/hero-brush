@@ -7,7 +7,7 @@ import { useCallback, useEffect, useRef, useState } from 'react';
 import { resumeAudio, suspendAudio } from '../audio/engine';
 import { music } from '../audio/music';
 import { sfx } from '../audio/sfx';
-import { speak, stopSpeaking } from '../audio/voice';
+import { preloadVoices, say, stopVoice } from '../audio/voice';
 import type { HeroPack } from '../heroes';
 import { acquireWakeLock, releaseWakeLock } from '../pwa/wakeLock';
 import { GameClock } from './clock';
@@ -15,6 +15,7 @@ import { countdownAt } from './countdown';
 import { resetRuntime, runtime, type Phase } from './runtime';
 import { MIN_RECORD_SECONDS } from './scoring';
 import { stepSimulation } from './simulation';
+import { voiceCueAt } from './voiceCues';
 import { type SessionResult, useStore } from './store';
 import { BOSS_START, SESSION_SECONDS, ZONES, isSessionComplete, timeLeft } from './zones';
 
@@ -41,7 +42,8 @@ interface RunnerState {
   disposed: boolean;
   lastHud: number;
   countdownStep: number;
-  midwaySaid: boolean;
+  /** Index of the next scripted quip / praise cue (see voiceCues.ts). */
+  nextCue: number;
   startedAt: number;
   lastFrame: number;
   timers: Set<number>;
@@ -63,7 +65,7 @@ export function useSessionRunner(hero: HeroPack): SessionApi {
     disposed: false,
     lastHud: 0,
     countdownStep: -1,
-    midwaySaid: false,
+    nextCue: 0,
     startedAt: 0,
     lastFrame: 0,
     timers: new Set(),
@@ -107,9 +109,12 @@ export function useSessionRunner(hero: HeroPack): SessionApi {
       setPaused(false);
       if (completed) {
         later(350, () => sfx.victory());
-        later(900, () => speak(hero.voice.victory));
+        later(900, () => {
+          say(hero.id, 'victory', 'normal');
+          say('narrator', 'rinse', 'normal');
+        });
       } else {
-        speak('Good try! Come back and brush a little longer next time.');
+        say('narrator', 'goodTry', 'high');
       }
       const res = await finishSession(elapsed, completed, s.startedAt);
       if (!s.disposed) setResult(res);
@@ -124,8 +129,8 @@ export function useSessionRunner(hero: HeroPack): SessionApi {
     runtime.paused = true;
     s.clock.pause();
     clearTimers();
+    stopVoice();
     void suspendAudio();
-    stopSpeaking();
     void releaseWakeLock();
     setPaused(true);
     setHud({ paused: true });
@@ -152,7 +157,7 @@ export function useSessionRunner(hero: HeroPack): SessionApi {
       runtime.paused = false;
       clearTimers();
       music.stop(0.2);
-      stopSpeaking();
+      stopVoice();
       void resumeAudio();
       void releaseWakeLock();
       go('hub');
@@ -164,7 +169,7 @@ export function useSessionRunner(hero: HeroPack): SessionApi {
     s.finished = false;
     s.disposed = false;
     s.countdownStep = -1;
-    s.midwaySaid = false;
+    s.nextCue = 0;
     s.startedAt = Date.now();
     s.lastFrame = performance.now();
     beginSession();
@@ -180,7 +185,8 @@ export function useSessionRunner(hero: HeroPack): SessionApi {
     setResult(null);
     setHud({ phase: 'countdown', timeLeft: 120, zoneIndex: 0, bossActive: false, bossHealth: 1, countdown: 3, paused: false, kills: 0 });
     void acquireWakeLock();
-    speak(hero.voice.start);
+    // decode the narrator's and this hero's lines while the countdown runs
+    void preloadVoices(['narrator', hero.id]);
 
     let raf = 0;
     const loop = () => {
@@ -194,15 +200,20 @@ export function useSessionRunner(hero: HeroPack): SessionApi {
         const cd = countdownAt(rt.countdownT);
         if (cd.step !== s.countdownStep) {
           s.countdownStep = cd.step;
-          if (cd.step > 0) sfx.countdown(false);
-          else sfx.go();
+          if (cd.step > 0) {
+            sfx.countdown(false);
+            if (cd.step <= 3) say('narrator', `count${cd.step as 1 | 2 | 3}`, 'high');
+          } else {
+            sfx.go();
+            say('narrator', 'go', 'high');
+          }
         }
         if (cd.started) {
           rt.phase = 'playing';
           s.startedAt = Date.now();
           s.clock.start();
           music.start();
-          speak(ZONES[0].voice);
+          say('narrator', ZONES[0].voice, 'normal');
           setPhase('playing');
         }
       } else if (rt.phase === 'playing') {
@@ -212,17 +223,17 @@ export function useSessionRunner(hero: HeroPack): SessionApi {
         stepSimulation(rt, { hero });
         if (rt.zoneIndex !== prevZone) {
           sfx.zoneChime();
-          speak(ZONES[rt.zoneIndex].voice);
+          say('narrator', ZONES[rt.zoneIndex].voice, 'normal');
           if (speed === 1) music.syncTo(rt.elapsed);
         }
         if (!prevBoss && rt.bossActive) {
           sfx.bossRoar();
           if (speed === 1) music.syncTo(Math.max(rt.elapsed, BOSS_START));
-          later(600, () => speak(hero.voice.boss));
+          later(600, () => say(hero.id, 'boss', 'normal'));
         }
-        if (!s.midwaySaid && rt.elapsed >= 50) {
-          s.midwaySaid = true;
-          speak(hero.voice.midway, { interrupt: false });
+        // scripted quips and praise: low priority, skipped if a prompt is playing
+        for (let cue = voiceCueAt(s.nextCue); cue && rt.elapsed >= cue.at; cue = voiceCueAt(++s.nextCue)) {
+          if (rt.elapsed - cue.at < 3) say(cue.speaker === 'hero' ? hero.id : 'narrator', cue.line, 'low');
         }
         if (isSessionComplete(rt.elapsed)) {
           void finish(true);
@@ -258,7 +269,7 @@ export function useSessionRunner(hero: HeroPack): SessionApi {
       s.clock.stop();
       clearTimers();
       music.stop(0.2);
-      stopSpeaking();
+      stopVoice();
       void releaseWakeLock();
       rt.phase = 'idle';
       rt.paused = false;

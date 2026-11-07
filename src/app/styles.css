@@ -830,3 +830,38 @@ input:focus-visible {
     animation: none;
   }
 }
+
+/* ---------- language ---------- */
+/* The rounded fallbacks (Segoe UI Rounded, Arial Rounded MT) have no Cyrillic; use system fonts that do. */
+:root:lang(bg) {
+  --font: 'Nunito', 'Segoe UI', Roboto, 'Noto Sans', 'Helvetica Neue', Arial, system-ui, -apple-system, sans-serif;
+}
+.lang-toggle {
+  display: inline-flex;
+  border-radius: 999px;
+  overflow: hidden;
+  background: rgba(0, 0, 0, 0.3);
+  border: 2px solid rgba(255, 255, 255, 0.18);
+  align-self: center;
+}
+.lang-toggle button {
+  padding: 6px 12px;
+  font-weight: 900;
+  font-size: 14px;
+  background: transparent;
+  opacity: 0.75;
+}
+.lang-toggle button.active {
+  background: var(--accent);
+  color: #1b1340;
+  opacity: 1;
+}
+.go-button.long {
+  font-size: clamp(30px, 9.5vw, 50px);
+}
+.countdown-number.long {
+  font-size: clamp(64px, 20vw, 120px);
+}
+.segmented.no-caps button {
+  text-transform: none;
+}

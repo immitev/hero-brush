@@ -5,6 +5,7 @@
  * screen does not reset it).
  */
 import { useEffect, useRef, useState } from 'react';
+import { useT } from '../../i18n';
 
 export const HOLD_SECONDS = 3;
 export const MAX_MISSES = 3;
@@ -38,6 +39,7 @@ export function Gate({ onPass }: { onPass: () => void }) {
   const [now, setNow] = useState(() => Date.now());
   const holdStart = useRef<number | null>(null);
   const raf = useRef(0);
+  const { t } = useT();
 
   const locked = lockedUntil > now;
   const lockLeft = Math.max(0, Math.ceil((lockedUntil - now) / 1000));
@@ -97,8 +99,8 @@ export function Gate({ onPass }: { onPass: () => void }) {
   if (locked) {
     return (
       <div className="card gate">
-        <h2>Parents only</h2>
-        <p>Too many tries. Try again in {lockLeft} s.</p>
+        <h2>{t('gate.title')}</h2>
+        <p>{t('gate.locked', { seconds: lockLeft })}</p>
       </div>
     );
   }
@@ -106,8 +108,8 @@ export function Gate({ onPass }: { onPass: () => void }) {
   if (!held) {
     return (
       <div className="card gate">
-        <h2>Parents only</h2>
-        <p>Press and hold for {HOLD_SECONDS} seconds.</p>
+        <h2>{t('gate.title')}</h2>
+        <p>{t('gate.hold', { seconds: HOLD_SECONDS })}</p>
         <button
           type="button"
           className="hold-btn"
@@ -116,10 +118,10 @@ export function Gate({ onPass }: { onPass: () => void }) {
           onPointerLeave={stopHold}
           onPointerCancel={stopHold}
           onContextMenu={(e) => e.preventDefault()}
-          aria-label="Press and hold to open the parent area"
+          aria-label={t('gate.holdAria')}
         >
           <span className="hold-fill" style={{ transform: `scaleX(${holdProgress})` }} />
-          <span>Hold</span>
+          <span>{t('gate.holdButton')}</span>
         </button>
       </div>
     );
@@ -127,12 +129,12 @@ export function Gate({ onPass }: { onPass: () => void }) {
 
   return (
     <form className="card gate" onSubmit={check}>
-      <h2>Parents only</h2>
-      <p>What is {question.text}?</p>
-      <input type="number" inputMode="numeric" value={answer} onChange={(e) => setAnswer(e.target.value)} autoFocus aria-label="Answer" />
-      {wrong && <small className="error">Not quite, here is a new one.</small>}
+      <h2>{t('gate.title')}</h2>
+      <p>{t('gate.question', { question: question.text })}</p>
+      <input type="number" inputMode="numeric" value={answer} onChange={(e) => setAnswer(e.target.value)} autoFocus aria-label={t('gate.answer')} />
+      {wrong && <small className="error">{t('gate.wrong')}</small>}
       <button className="btn" type="submit">
-        Enter
+        {t('gate.enter')}
       </button>
     </form>
   );

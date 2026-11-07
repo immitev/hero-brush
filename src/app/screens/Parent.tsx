@@ -1,9 +1,9 @@
 import { useMemo, useState } from 'react';
 import { setVolumes } from '../../audio/engine';
-import { setVoiceMuted } from '../../audio/voice';
+import { setVoiceLevel, setVoiceMuted } from '../../audio/voice';
 import { useStore } from '../../game/store';
 import { formatClock } from '../../game/zones';
-import { getHero } from '../../heroes';
+import { LANGS, LANG_NAME, useT } from '../../i18n';
 import { StarIcon } from '../components/Icons';
 import { Gate } from './ParentGate';
 
@@ -17,6 +17,7 @@ export function Parent() {
   const updateSettings = useStore((s) => s.updateSettings);
   const resetAllData = useStore((s) => s.resetAllData);
   const [confirmReset, setConfirmReset] = useState(false);
+  const { t, heroName } = useT();
 
   const recent = useMemo(() => [...sessions].sort((x, y) => y.startedAt - x.startedAt).slice(0, 30), [sessions]);
   const completedCount = sessions.filter((s) => s.completed).length;
@@ -25,9 +26,9 @@ export function Parent() {
     <div className="screen parent">
       <div className="parent-top">
         <button className="btn btn-ghost btn-small" onClick={() => go('hub')}>
-          Back
+          {t('parent.back')}
         </button>
-        <h2>Parent area</h2>
+        <h2>{t('parent.title')}</h2>
         <span />
       </div>
       {!passed ? (
@@ -35,31 +36,41 @@ export function Parent() {
       ) : (
         <div className="parent-body">
           <section className="card">
-            <h3>Summary</h3>
+            <h3>{t('parent.summary')}</h3>
             <div className="summary">
               <div>
                 <strong>{streak.current}</strong>
-                <span>day streak</span>
+                <span>{t('parent.dayStreak')}</span>
               </div>
               <div>
                 <strong>{streak.best}</strong>
-                <span>best streak</span>
+                <span>{t('parent.bestStreak')}</span>
               </div>
               <div>
                 <strong>{completedCount}</strong>
-                <span>full sessions</span>
+                <span>{t('parent.fullSessions')}</span>
               </div>
               <div>
                 <strong>{totalStars}</strong>
-                <span>stars</span>
+                <span>{t('parent.stars')}</span>
               </div>
             </div>
           </section>
 
           <section className="card">
-            <h3>Settings</h3>
+            <h3>{t('parent.settings')}</h3>
+            <div className="row">
+              <span>{t('parent.language')}</span>
+              <div className="segmented no-caps">
+                {LANGS.map((l) => (
+                  <button key={l} lang={l} className={settings.lang === l ? 'active' : ''} onClick={() => updateSettings({ lang: l })}>
+                    {LANG_NAME[l]}
+                  </button>
+                ))}
+              </div>
+            </div>
             <label className="row">
-              <span>Music volume</span>
+              <span>{t('parent.musicVolume')}</span>
               <input
                 type="range"
                 min={0}
@@ -74,7 +85,7 @@ export function Parent() {
               />
             </label>
             <label className="row">
-              <span>Sound effects</span>
+              <span>{t('parent.sfxVolume')}</span>
               <input
                 type="range"
                 min={0}
@@ -89,7 +100,23 @@ export function Parent() {
               />
             </label>
             <label className="row">
-              <span>Mute voice prompts</span>
+              <span>{t('parent.voiceVolume')}</span>
+              <input
+                type="range"
+                min={0}
+                max={1}
+                step={0.05}
+                value={settings.voiceVolume}
+                disabled={settings.voiceMuted}
+                onChange={(e) => {
+                  const v = Number(e.target.value);
+                  updateSettings({ voiceVolume: v });
+                  setVoiceLevel(v);
+                }}
+              />
+            </label>
+            <label className="row">
+              <span>{t('parent.muteVoice')}</span>
               <input
                 type="checkbox"
                 checked={settings.voiceMuted}
@@ -100,39 +127,39 @@ export function Parent() {
               />
             </label>
             <div className="row">
-              <span>Graphics quality</span>
+              <span>{t('parent.quality')}</span>
               <div className="segmented">
                 {(['low', 'high'] as const).map((q) => (
                   <button key={q} className={settings.quality === q ? 'active' : ''} onClick={() => updateSettings({ quality: q })}>
-                    {q}
+                    {t(`parent.quality.${q}`)}
                   </button>
                 ))}
               </div>
             </div>
-            <small>Low quality turns off glow effects and uses fewer particles. Use it if the game stutters.</small>
+            <small>{t('parent.qualityHint')}</small>
           </section>
 
           <section className="card">
-            <h3>History</h3>
+            <h3>{t('parent.history')}</h3>
             {recent.length === 0 ? (
-              <p className="muted">No sessions yet.</p>
+              <p className="muted">{t('parent.noSessions')}</p>
             ) : (
               <table className="history">
                 <thead>
                   <tr>
-                    <th>Date</th>
-                    <th>Slot</th>
-                    <th>Hero</th>
-                    <th>Time</th>
-                    <th>Stars</th>
+                    <th>{t('parent.col.date')}</th>
+                    <th>{t('parent.col.slot')}</th>
+                    <th>{t('parent.col.hero')}</th>
+                    <th>{t('parent.col.time')}</th>
+                    <th>{t('parent.col.stars')}</th>
                   </tr>
                 </thead>
                 <tbody>
                   {recent.map((s) => (
                     <tr key={s.id ?? s.startedAt} className={s.completed ? '' : 'partial'}>
                       <td>{s.dateKey}</td>
-                      <td>{s.slot}</td>
-                      <td>{getHero(s.heroId).name}</td>
+                      <td>{t(s.slot === 'morning' ? 'parent.slot.morning' : 'parent.slot.evening')}</td>
+                      <td>{heroName(s.heroId)}</td>
                       <td>{formatClock(s.elapsed)}</td>
                       <td>
                         <span className="stars-inline">
@@ -150,11 +177,11 @@ export function Parent() {
           </section>
 
           <section className="card danger">
-            <h3>Data</h3>
-            <p className="muted">Everything is stored only on this device. No accounts, no analytics.</p>
+            <h3>{t('parent.data')}</h3>
+            <p className="muted">{t('parent.dataNote')}</p>
             {!confirmReset ? (
               <button className="btn btn-ghost" onClick={() => setConfirmReset(true)}>
-                Delete all data
+                {t('parent.delete')}
               </button>
             ) : (
               <div className="row">
@@ -165,10 +192,10 @@ export function Parent() {
                     setConfirmReset(false);
                   }}
                 >
-                  Yes, delete everything
+                  {t('parent.deleteConfirm')}
                 </button>
                 <button className="btn btn-ghost" onClick={() => setConfirmReset(false)}>
-                  Cancel
+                  {t('parent.cancel')}
                 </button>
               </div>
             )}

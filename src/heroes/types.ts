@@ -1,3 +1,5 @@
+import type { HeroSpeaker } from '../voice/lines';
+
 /** How the hero travels between teeth: jets, swings on a web line, or glides with a cape. */
 export type MovementKind = 'hover' | 'swing' | 'glide';
 
@@ -22,23 +24,15 @@ export interface Suit {
   palette: HeroPalette;
 }
 
-export interface HeroVoice {
-  select: string;
-  start: string;
-  boss: string;
-  victory: string;
-  midway: string;
-}
-
 export interface HeroPack {
-  id: string;
+  /** Also the voice speaker id (src/voice/lines.json). */
+  id: HeroSpeaker;
+  /** English name; the UI uses the translated `hero.<id>.name` (src/i18n). */
   name: string;
-  tagline: string;
   movement: MovementKind;
   /** World units per second when travelling between teeth. */
   travelSpeed: number;
   suits: Suit[];
-  voice: HeroVoice;
   /** UI colours. */
   ui: { bg: string; fg: string };
 }

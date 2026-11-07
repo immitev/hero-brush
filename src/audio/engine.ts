@@ -6,16 +6,20 @@ let ctx: AudioContext | null = null;
 let master: GainNode | null = null;
 let musicBus: GainNode | null = null;
 let sfxBus: GainNode | null = null;
+let voiceBus: GainNode | null = null;
 let noiseBuffer: AudioBuffer | null = null;
 
 // Volumes are remembered here so that values set before the context exists
 // (settings loaded at startup) are applied when the buses are created.
 let musicVolume = 0.7;
 let sfxVolume = 0.8;
+let voiceVolume = 0.9;
+let voiceMuted = false;
 
 function applyVolumes(): void {
   if (musicBus) musicBus.gain.value = musicVolume * musicVolume; // perceptual-ish curve
   if (sfxBus) sfxBus.gain.value = sfxVolume * sfxVolume;
+  if (voiceBus) voiceBus.gain.value = voiceMuted ? 0 : voiceVolume * voiceVolume;
 }
 
 export function getContext(): AudioContext | null {
@@ -32,8 +36,10 @@ export function getContext(): AudioContext | null {
   master.connect(comp).connect(ctx.destination);
   musicBus = ctx.createGain();
   sfxBus = ctx.createGain();
+  voiceBus = ctx.createGain();
   musicBus.connect(master);
   sfxBus.connect(master);
+  voiceBus.connect(master);
   applyVolumes();
   return ctx;
 }
@@ -46,6 +52,11 @@ export function getMusicBus(): GainNode | null {
 export function getSfxBus(): GainNode | null {
   getContext();
   return sfxBus;
+}
+
+export function getVoiceBus(): GainNode | null {
+  getContext();
+  return voiceBus;
 }
 
 /** True when the context can be resumed ('suspended' or iOS 'interrupted'). */
@@ -97,6 +108,17 @@ export function setVolumes(music: number, sfx: number): void {
   musicVolume = Math.max(0, Math.min(1, music));
   sfxVolume = Math.max(0, Math.min(1, sfx));
   applyVolumes();
+}
+
+export function setVoiceVolume(volume: number, muted: boolean): void {
+  voiceVolume = Math.max(0, Math.min(1, volume));
+  voiceMuted = muted;
+  applyVolumes();
+}
+
+/** Current voice level 0..1 (0 when muted), for the speech-synthesis fallback. */
+export function getVoiceLevel(): number {
+  return voiceMuted ? 0 : voiceVolume;
 }
 
 export function getNoiseBuffer(): AudioBuffer | null {

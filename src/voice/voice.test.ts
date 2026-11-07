@@ -1,0 +1,66 @@
+import { describe, expect, it } from 'vitest';
+import { decide } from '../audio/voice';
+import { VOICE_CUES } from '../game/voiceCues';
+import { ZONES } from '../game/zones';
+import { HEROES } from '../heroes';
+import { LANGS } from '../i18n/lang';
+import { HERO_LINES, LINES, SPEAKERS, VOICES, lineText } from './lines';
+
+describe('voice lines', () => {
+  it('every line has text in every language', () => {
+    for (const speaker of SPEAKERS) {
+      for (const [id, texts] of Object.entries(LINES[speaker])) {
+        for (const lang of LANGS) expect(texts[lang]?.trim(), `${lang}/${speaker}/${id}`).toBeTruthy();
+        expect(Object.keys(texts).sort(), `${speaker}/${id}`).toEqual([...LANGS].sort());
+      }
+    }
+  });
+
+  it('bg lines are Cyrillic', () => {
+    for (const speaker of SPEAKERS)
+      for (const id of Object.keys(LINES[speaker])) expect(/[Ѐ-ӿ]/.test(lineText('bg', speaker, id)), `${speaker}/${id}`).toBe(true);
+  });
+
+  it('every hero is a speaker with the same set of lines', () => {
+    for (const hero of HEROES) {
+      expect(SPEAKERS).toContain(hero.id);
+      expect(Object.keys(LINES[hero.id]).sort()).toEqual([...HERO_LINES].sort());
+    }
+    expect(SPEAKERS.filter((s) => s !== 'narrator').sort()).toEqual(HEROES.map((h) => h.id).sort());
+  });
+
+  it('zone prompts and scripted cues refer to existing lines', () => {
+    for (const z of ZONES) expect(LINES.narrator[z.voice], z.voice).toBeTruthy();
+    for (const c of VOICE_CUES) {
+      const speaker = c.speaker === 'hero' ? 'ironman' : 'narrator';
+      expect(LINES[speaker][c.line], c.line).toBeTruthy();
+    }
+    for (const n of [1, 2, 3]) expect(LINES.narrator[`count${n}`]).toBeTruthy();
+    for (const id of ['go', 'goodTry', 'rinse']) expect(LINES.narrator[id]).toBeTruthy();
+    for (const id of ['select', 'boss', 'victory']) expect(HERO_LINES).toContain(id);
+  });
+
+  it('every speaker has a voice in every language', () => {
+    for (const lang of LANGS) for (const s of SPEAKERS) expect(VOICES.languages[lang].speakers[s]?.voice, `${lang}/${s}`).toBeTruthy();
+  });
+
+  it('heroes sound different from each other within a language', () => {
+    for (const lang of LANGS) {
+      const sigs = HEROES.map((h) => JSON.stringify({ ...VOICES.languages[lang].speakers[h.id], fallback: undefined }));
+      expect(new Set(sigs).size, lang).toBe(HEROES.length);
+    }
+  });
+});
+
+describe('voice queue policy', () => {
+  it('high interrupts, low only plays when idle, normal waits or replaces low', () => {
+    expect(decide('high', 'normal', 2)).toBe('interrupt');
+    expect(decide('low', null, 0)).toBe('play');
+    expect(decide('low', 'low', 0)).toBe('drop');
+    expect(decide('low', null, 1)).toBe('drop');
+    expect(decide('normal', null, 0)).toBe('play');
+    expect(decide('normal', 'low', 0)).toBe('replace');
+    expect(decide('normal', 'normal', 0)).toBe('enqueue');
+    expect(decide('normal', 'high', 0)).toBe('enqueue');
+  });
+});
