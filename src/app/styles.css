@@ -963,3 +963,126 @@ input:focus-visible {
     animation: none;
   }
 }
+
+/* ======================================================================
+   Readability theme: one palette, solid panels, AA-contrast text.
+   ink panels (#1b1340 @ 92%) + white text + one yellow accent.
+   ====================================================================== */
+:root {
+  --ink: #1b1340;
+  --panel: rgba(27, 19, 64, 0.92);
+  --panel-border: rgba(255, 255, 255, 0.16);
+  --text-muted: #d9d3f5; /* 10:1 on --ink */
+  --shadow-panel: 0 6px 18px rgba(12, 6, 35, 0.35);
+}
+
+/* ---- hero select: text lives on a solid card, never on the 3D scene ---- */
+.select-bottom {
+  background: var(--panel);
+  border: 2px solid var(--panel-border);
+  border-radius: 22px;
+  padding: 14px 14px 14px;
+  box-shadow: var(--shadow-panel);
+  gap: 8px;
+}
+.hero-name {
+  font-size: clamp(30px, 8vw, 44px);
+  line-height: 1.05;
+  text-shadow: none;
+}
+.hero-tagline {
+  color: var(--text-muted);
+  opacity: 1;
+  font-size: 15px;
+  line-height: 1.35;
+  max-width: 34ch;
+}
+.chip {
+  background: rgba(255, 255, 255, 0.08);
+  border-color: rgba(255, 255, 255, 0.28);
+  color: #fff;
+}
+.chip.active {
+  background: rgba(255, 209, 102, 0.18);
+  border-color: var(--accent);
+}
+.chip.locked {
+  opacity: 1;
+  color: var(--text-muted);
+}
+.chip .lock {
+  opacity: 1;
+}
+.select-top h2 {
+  text-shadow: 0 2px 6px rgba(0, 0, 0, 0.6);
+}
+.arrow {
+  background: var(--panel);
+  border-color: var(--panel-border);
+}
+
+/* ---- in-game HUD on the pink mouth: solid ink panels, outlined clock ---- */
+.hud-zone,
+.coach {
+  background: var(--panel);
+  border-color: var(--panel-border);
+  box-shadow: var(--shadow-panel);
+  backdrop-filter: none;
+  -webkit-backdrop-filter: none;
+}
+.hud-zone-label {
+  color: var(--text-muted);
+  opacity: 1;
+}
+.coach-text {
+  text-shadow: none;
+}
+.clock {
+  color: #fff;
+  -webkit-text-stroke: 3px var(--ink);
+  paint-order: stroke fill;
+  text-shadow: 0 6px 0 rgba(27, 19, 64, 0.55);
+}
+.clock.urgent {
+  color: var(--accent);
+}
+.zone-dots {
+  background: var(--panel);
+  padding: 6px 10px;
+  border-radius: 999px;
+}
+.zone-dots span {
+  background: rgba(255, 255, 255, 0.2);
+  border-color: rgba(255, 255, 255, 0.45);
+}
+.clean-bar {
+  background: var(--panel);
+  border-color: var(--panel-border);
+}
+.clean-bar-fill {
+  background: linear-gradient(90deg, var(--mint), #c9fff2);
+}
+.mouthmap {
+  background: var(--panel);
+  border-radius: 50%;
+}
+
+/* ---- pause / victory cards ---- */
+.overlay.pause .card,
+.toast {
+  background: var(--panel);
+  border-color: var(--panel-border);
+}
+.victory-top p,
+.rinse-why,
+.muted,
+.card small {
+  color: var(--text-muted);
+  opacity: 1;
+}
+.hud-top .icon-btn {
+  background: var(--panel);
+  border-color: var(--panel-border);
+  color: #fff;
+  box-shadow: var(--shadow-panel);
+}

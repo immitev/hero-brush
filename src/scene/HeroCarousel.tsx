@@ -19,8 +19,8 @@ function Pedestal({ active }: { active: boolean }) {
     </mesh>
   );
 }
-const pedestalActive = toon('#ffd166');
-const pedestalIdle = toon('#4b2a6e');
+const pedestalActive = toon('#7d63d9');
+const pedestalIdle = toon('#3b2b6b');
 
 function Ring({ index, suits, setFacing }: { index: number; suits: Record<string, string>; setFacing: (i: number) => void }) {
   const ring = useRef<THREE.Group>(null);
@@ -68,11 +68,11 @@ export function HeroCarousel({ index, suits, onFacing }: { index: number; suits:
   return (
     <Canvas
       dpr={[1, 2]}
-      camera={{ fov: 42, position: [0, 0.6, 7.2], near: 0.1, far: 50 }}
+      camera={{ fov: 42, position: [0, 0.6, 9.6], near: 0.1, far: 50 }}
       gl={{ antialias: true, alpha: true, powerPreference: 'high-performance' }}
       onCreated={({ gl, camera }) => {
         gl.toneMapping = THREE.NoToneMapping;
-        camera.lookAt(0, 0.1, RADIUS);
+        camera.lookAt(0, -0.75, RADIUS);
       }}
       style={{ position: 'absolute', inset: 0 }}
     >
