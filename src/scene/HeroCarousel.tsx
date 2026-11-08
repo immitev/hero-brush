@@ -2,7 +2,7 @@
 import { Canvas, useFrame } from '@react-three/fiber';
 import { useRef } from 'react';
 import * as THREE from 'three';
-import { HEROES, getSuit } from '../heroes';
+import { HEROES, type Suit } from '../heroes';
 import { toon } from './materials';
 import { HeroModel, createHeroAnim, type HeroAnim } from './heroes/HeroModel';
 
@@ -22,7 +22,7 @@ function Pedestal({ active }: { active: boolean }) {
 const pedestalActive = toon('#7d63d9');
 const pedestalIdle = toon('#3b2b6b');
 
-function Ring({ index, suits, setFacing }: { index: number; suits: Record<string, string>; setFacing: (i: number) => void }) {
+function Ring({ index, suits, setFacing }: { index: number; suits: readonly Suit[]; setFacing: (i: number) => void }) {
   const ring = useRef<THREE.Group>(null);
   const anims = useRef<HeroAnim[]>(HEROES.map(() => createHeroAnim('idle')));
   const angle = useRef(0);
@@ -56,7 +56,7 @@ function Ring({ index, suits, setFacing }: { index: number; suits: Record<string
         return (
           <group key={hero.id} position={[x, -0.9, z]} rotation={[0, a, 0]}>
             <Pedestal active={i === index} />
-            <HeroModel hero={hero} suit={getSuit(hero, suits[hero.id])} anim={{ current: anims.current[i] }} />
+            <HeroModel hero={hero} suit={suits[i]} anim={{ current: anims.current[i] }} />
           </group>
         );
       })}
@@ -64,7 +64,7 @@ function Ring({ index, suits, setFacing }: { index: number; suits: Record<string
   );
 }
 
-export function HeroCarousel({ index, suits, onFacing }: { index: number; suits: Record<string, string>; onFacing?: (i: number) => void }) {
+export function HeroCarousel({ index, suits, onFacing }: { index: number; suits: readonly Suit[]; onFacing?: (i: number) => void }) {
   return (
     <Canvas
       dpr={[1, 2]}

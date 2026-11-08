@@ -1,5 +1,6 @@
 import Dexie, { type EntityTable } from 'dexie';
 import type { SessionRecord } from '../game/scoring';
+import type { HeroLook } from '../game/wardrobe';
 import { browserLang, isEnabledLang, type Lang } from '../i18n/lang';
 
 export type QualityTier = 'low' | 'high';
@@ -14,6 +15,8 @@ export interface Settings {
   quality: QualityTier;
   /** Selected suit per hero id. */
   suits: Record<string, string>;
+  /** Wardrobe picks (brush, colours, add-on) per hero id. */
+  looks: Record<string, HeroLook>;
   lastHeroId: string;
 }
 
@@ -25,6 +28,7 @@ export const DEFAULT_SETTINGS: Settings = {
   lang: browserLang(),
   quality: 'high',
   suits: {},
+  looks: {},
   lastHeroId: 'ironman',
 };
 

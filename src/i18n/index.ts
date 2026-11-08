@@ -34,6 +34,7 @@ export interface Translator {
   tn: (base: PluralBase, count: number, params?: Params) => string;
   heroName: (heroId: string) => string;
   suitName: (heroId: string, suitId: string) => string;
+  itemName: (category: string, id: string) => string;
 }
 
 export function makeTranslator(lang: Lang): Translator {
@@ -45,6 +46,7 @@ export function makeTranslator(lang: Lang): Translator {
     tn: (base, count, params) => translatePlural(lang, base, count, params),
     heroName: (heroId) => lookup(`hero.${heroId}.name`, heroId),
     suitName: (heroId, suitId) => lookup(`suit.${heroId}.${suitId}`, suitId),
+    itemName: (category, id) => lookup(`item.${category}.${id}`, id),
   };
 }
 

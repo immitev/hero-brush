@@ -12,6 +12,7 @@ import type { HeroPalette, HeroPack, Suit } from '../../heroes';
 import type { HeroState } from '../../game/runtime';
 import { glow, toon } from '../materials';
 import { webTexture } from './webTexture';
+import { Accessory } from './Accessory';
 
 export type HeroMode = 'idle' | 'fight' | 'celebrate';
 
@@ -193,10 +194,10 @@ function Limb({ length, radius, material, children, offsetY = 0 }: { length: num
 function HandBrush({ palette, visibleRef }: { palette: HeroPalette; visibleRef: MutableRefObject<THREE.Group | null> }) {
   const m = useMemo(
     () => ({
-      handle: toon(palette.brush),
-      grip: toon('#ffffff'),
+      handle: palette.brushGlow ? glow(palette.brush, 1.3) : toon(palette.brush),
+      grip: toon(palette.brushStripe ?? '#ffffff'),
       head: toon('#fdfdfd'),
-      bristles: toon('#9ff0dc'),
+      bristles: toon(palette.bristle ?? '#9ff0dc'),
       paste: toon('#ffffff'),
       stripeA: toon('#ff5c7a'),
       stripeB: toon('#4f8dff'),
@@ -209,6 +210,12 @@ function HandBrush({ palette, visibleRef }: { palette: HeroPalette; visibleRef: 
       <mesh position={[0.3, 0, 0]} rotation={[0, 0, Math.PI / 2]} material={m.handle}>
         <capsuleGeometry args={[0.065, 0.55, 4, 10]} />
       </mesh>
+      {palette.brushStripe &&
+        [0.22, 0.36, 0.5].map((x) => (
+          <mesh key={x} position={[x, 0, 0]} rotation={[0, 0, Math.PI / 2]} material={m.grip}>
+            <cylinderGeometry args={[0.07, 0.07, 0.05, 12]} />
+          </mesh>
+        ))}
       {/* grip ring */}
       <mesh position={[0.08, 0, 0]} rotation={[0, 0, Math.PI / 2]} material={m.grip}>
         <cylinderGeometry args={[0.075, 0.075, 0.12, 12]} />
@@ -335,6 +342,7 @@ function IronMan({ suit, anim }: HeroModelProps) {
         </group>
       </group>
       <group ref={refs.head} position={[0, HEAD_Y, 0]}>
+        <Accessory id={suit.accessory} />
         <mesh material={m.red}>
           <sphereGeometry args={[HEAD_R, 24, 18]} />
         </mesh>
@@ -442,6 +450,7 @@ function SpiderMan({ suit, anim }: HeroModelProps) {
             </group>
           </group>
           <group ref={refs.head} position={[0, HEAD_Y, 0]}>
+            <Accessory id={suit.accessory} />
             <mesh material={m.red}>
               <sphereGeometry args={[HEAD_R, 24, 18]} />
             </mesh>
@@ -562,6 +571,7 @@ function Batman({ suit, anim }: HeroModelProps) {
         </group>
       </group>
       <group ref={refs.head} position={[0, HEAD_Y, 0]}>
+        <Accessory id={suit.accessory} />
         <mesh material={m.skin}>
           <sphereGeometry args={[HEAD_R * 0.98, 24, 18]} />
         </mesh>

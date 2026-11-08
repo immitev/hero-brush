@@ -2,9 +2,9 @@
 import { useEffect, useState } from 'react';
 import { sfx } from '../../audio/sfx';
 import { SEGMENTS, formatClock } from '../../game/segments';
-import { type SessionResult, useStore } from '../../game/store';
+import { type SessionResult, useDressedSuit, useStore } from '../../game/store';
 import { type SessionOutcome, useSessionRunner } from '../../game/useSessionRunner';
-import { getHero, getSuit } from '../../heroes';
+import { getHero } from '../../heroes';
 import { type MessageKey, type Translator, useT } from '../../i18n';
 import { GameScene } from '../../scene/GameScene';
 import { MotionIcon, PauseIcon, StarIcon } from '../components/Icons';
@@ -12,9 +12,8 @@ import { MouthMap } from '../components/MouthMap';
 
 export function Play() {
   const heroId = useStore((s) => s.heroId);
-  const suits = useStore((s) => s.settings.suits);
   const hero = getHero(heroId);
-  const suit = getSuit(hero, suits[hero.id]);
+  const suit = useDressedSuit(hero);
   const session = useSessionRunner(hero);
   const { heroName } = useT();
 
@@ -130,7 +129,7 @@ function thirdStarHint(result: SessionResult, t: Translator['t']): string | null
 
 function VictoryOverlay({ outcome, result, heroName }: { outcome: SessionOutcome | null; result: SessionResult | null; heroName: string }) {
   const go = useStore((s) => s.go);
-  const { t, tn, suitName } = useT();
+  const { t, tn, suitName, itemName } = useT();
   const [shown, setShown] = useState(0);
   const stars = result?.stars ?? 0;
   const completed = outcome?.completed ?? result?.completed ?? false;
@@ -171,6 +170,11 @@ function VictoryOverlay({ outcome, result, heroName }: { outcome: SessionOutcome
             {t('victory.unlocked')} <strong>{suitName(result.unlockedSuit.heroId, result.unlockedSuit.suitId)}</strong>
           </div>
         )}
+        {result && result.unlockedItems.length > 0 && (
+          <div className="unlock">
+            {t('victory.newItems')} <strong>{result.unlockedItems.map((i) => itemName(i.category, i.id)).join(', ')}</strong>
+          </div>
+        )}
         <div className="streak-line">
           {result ? (result.streak.current > 0 ? tn('victory.streak', result.streak.current) : t('victory.noStreak')) : t('victory.saving')}
           {hint && <small>{hint}</small>}
@@ -178,6 +182,11 @@ function VictoryOverlay({ outcome, result, heroName }: { outcome: SessionOutcome
         <div className="rinse">{t('victory.spit')}</div>
         <small className="rinse-why">{t('victory.spitWhy')}</small>
       </div>
+      {result && result.unlockedItems.length > 0 && (
+        <button className="btn btn-ghost ward-open" onClick={() => go('wardrobe')}>
+          <span aria-hidden="true">👕</span> {t('wardrobe.open')}
+        </button>
+      )}
       <button className="btn btn-big" onClick={() => go('hub')}>
         {t('victory.done')}
       </button>

@@ -1,5 +1,6 @@
+import { useMemo } from 'react';
 import { create } from 'zustand';
-import { HEROES } from '../heroes';
+import { HEROES, type HeroPack } from '../heroes';
 import {
   type SessionRecord,
   type Slot,
@@ -14,8 +15,10 @@ import {
 import { SESSION_SECONDS } from './segments';
 import { DEFAULT_SETTINGS, type Settings, addSession, loadSessions, loadSettings, saveSettings, clearAllData } from '../storage/db';
 import type { Phase } from './runtime';
+import { type HeroLook, type Progress, type UnlockedItem, dressHero, newlyUnlocked } from './wardrobe';
+import type { Suit } from '../heroes';
 
-export type Screen = 'hub' | 'select' | 'play' | 'parent';
+export type Screen = 'hub' | 'select' | 'wardrobe' | 'play' | 'parent';
 
 export interface Hud {
   phase: Phase;
@@ -38,6 +41,8 @@ export interface SessionResult {
   /** Whether the other slot of the same day was already completed. */
   otherSlotDone: boolean;
   unlockedSuit: { heroId: string; suitId: string } | null;
+  /** Wardrobe items this session unlocked. */
+  unlockedItems: UnlockedItem[];
   streak: StreakInfo;
 }
 
@@ -60,6 +65,7 @@ export interface AppState {
   go: (screen: Screen) => void;
   selectHero: (heroId: string) => void;
   selectSuit: (heroId: string, suitId: string) => void;
+  setLook: (heroId: string, patch: HeroLook) => void;
   updateSettings: (patch: Partial<Settings>) => void;
   setHud: (patch: Partial<Hud>) => void;
   setForcedLowQuality: (v: boolean) => void;
@@ -121,6 +127,11 @@ export const useStore = create<AppState>((set, get) => ({
     get().updateSettings({ suits });
   },
 
+  setLook: (heroId, patch) => {
+    const looks = { ...get().settings.looks, [heroId]: { ...get().settings.looks[heroId], ...patch } };
+    get().updateSettings({ looks });
+  },
+
   updateSettings: (patch) => {
     const settings = { ...get().settings, ...patch };
     set({ settings });
@@ -145,6 +156,7 @@ export const useStore = create<AppState>((set, get) => ({
     const suitId = settings.suits[heroId] ?? hero.suits[0].id;
 
     const unlockedBefore = hero.suits.map((_, i) => isSuitUnlocked(sessions, heroId, i));
+    const progressBefore = progressOf(sessions);
     let next = sessions;
     if (elapsed >= MIN_RECORD_SECONDS) {
       const record: SessionRecord = {
@@ -167,7 +179,8 @@ export const useStore = create<AppState>((set, get) => ({
       }
     });
     const streak = computeStreak(next);
-    const result: SessionResult = { stars, elapsed, completed, heroId, slot, otherSlotDone, unlockedSuit, streak };
+    const unlockedItems = newlyUnlocked(progressBefore, progressOf(next));
+    const result: SessionResult = { stars, elapsed, completed, heroId, slot, otherSlotDone, unlockedSuit, unlockedItems, streak };
     set({ sessions: next, streak, totalStars: totalStars(next), lastResult: result });
     return result;
   },
@@ -182,5 +195,33 @@ export const useStore = create<AppState>((set, get) => ({
 
   effectiveQuality: () => (get().forcedLowQuality ? 'low' : get().settings.quality),
 }));
+
+/** Wardrobe progress: total stars and best day streak. */
+export function progressOf(sessions: readonly SessionRecord[]): Progress {
+  return { totalStars: totalStars(sessions), bestStreak: computeStreak(sessions).best };
+}
+
+/** Progress from the store (stable while sessions do not change). */
+export function useProgress(): Progress {
+  const total = useStore((s) => s.totalStars);
+  const best = useStore((s) => s.streak.best);
+  return useMemo(() => ({ totalStars: total, bestStreak: best }), [total, best]);
+}
+
+/** The suit a hero wears with its wardrobe picks applied (memoised so materials are not rebuilt). */
+export function useDressedSuit(hero: HeroPack): Suit {
+  const suitId = useStore((s) => s.settings.suits[hero.id]);
+  const look = useStore((s) => s.settings.looks[hero.id]);
+  const progress = useProgress();
+  return useMemo(() => dressHero(hero, suitId, look, progress), [hero, suitId, look, progress]);
+}
+
+/** Dressed suits of every hero, in HEROES order (for the carousel). */
+export function useDressedSuits(): Suit[] {
+  const suits = useStore((s) => s.settings.suits);
+  const looks = useStore((s) => s.settings.looks);
+  const progress = useProgress();
+  return useMemo(() => HEROES.map((h) => dressHero(h, suits[h.id], looks[h.id], progress)), [suits, looks, progress]);
+}
 
 export const selectHeroPack = (s: AppState) => HEROES.find((h) => h.id === s.heroId) ?? HEROES[0];

@@ -30,6 +30,11 @@ const gz = new THREE.Vector3();
 const guideBasis = new THREE.Matrix4();
 const shadowUp = new THREE.Vector3(0, 0, 1);
 
+/** A soft self-glow for the "glowing" wardrobe brushes. */
+function glowOf(suit: Suit): Partial<THREE.MeshStandardMaterialParameters> {
+  return suit.palette.brushGlow ? { emissive: new THREE.Color(suit.palette.brush), emissiveIntensity: 0.55 } : {};
+}
+
 export function Brush({ hero, suit }: { hero: HeroPack; suit: Suit }) {
   const group = useRef<THREE.Group>(null);
   const tufts = useRef<THREE.InstancedMesh>(null);
@@ -38,10 +43,10 @@ export function Brush({ hero, suit }: { hero: HeroPack; suit: Suit }) {
   const guide = useRef<THREE.Group>(null);
   const m = useMemo(
     () => ({
-      head: new THREE.MeshStandardMaterial({ color: suit.palette.brush, roughness: 0.45 }),
-      neck: new THREE.MeshStandardMaterial({ color: '#f7f8fa', roughness: 0.35 }),
-      handle: new THREE.MeshStandardMaterial({ color: '#f7f8fa', roughness: 0.4 }),
-      grip: new THREE.MeshStandardMaterial({ color: suit.palette.brush, roughness: 0.6 }),
+      head: new THREE.MeshStandardMaterial({ color: suit.palette.brush, roughness: 0.45, ...glowOf(suit) }),
+      neck: new THREE.MeshStandardMaterial({ color: suit.palette.brushStripe ?? '#f7f8fa', roughness: 0.35 }),
+      handle: new THREE.MeshStandardMaterial({ color: suit.palette.brushStripe ?? '#f7f8fa', roughness: 0.4 }),
+      grip: new THREE.MeshStandardMaterial({ color: suit.palette.brush, roughness: 0.6, ...glowOf(suit) }),
       bristle: new THREE.MeshStandardMaterial({ color: '#ffffff', roughness: 0.85 }),
       outline: new THREE.MeshBasicMaterial({ color: '#2a1b33', side: THREE.BackSide }),
       plate: new THREE.MeshStandardMaterial({ color: '#3a2a44', roughness: 0.7 }),
@@ -114,7 +119,7 @@ export function Brush({ hero, suit }: { hero: HeroPack; suit: Suit }) {
           dummy.scale.setScalar(1);
           dummy.updateMatrix();
           t.setMatrixAt(i, dummy.matrix);
-          t.setColorAt(i, color.set((r + c) % 2 === 0 ? '#ffffff' : '#bfe9ff'));
+          t.setColorAt(i, color.set((r + c) % 2 === 0 ? '#ffffff' : (suit.palette.bristle ?? '#bfe9ff')));
           i++;
         }
       }

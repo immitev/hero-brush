@@ -8,6 +8,7 @@ import { HeroSelect } from './screens/HeroSelect';
 import { Hub } from './screens/Hub';
 import { Parent } from './screens/Parent';
 import { Play } from './screens/Play';
+import { Wardrobe } from './screens/Wardrobe';
 
 export function App() {
   const ready = useStore((s) => s.ready);
@@ -42,6 +43,7 @@ export function App() {
     <>
       {screen === 'hub' && <Hub />}
       {screen === 'select' && <HeroSelect />}
+      {screen === 'wardrobe' && <Wardrobe />}
       {screen === 'play' && <Play />}
       {screen === 'parent' && <Parent />}
       <UpdatePrompt />

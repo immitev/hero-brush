@@ -14,14 +14,24 @@ export interface HeroPalette {
   glow: string;
   /** Toothbrush handle colour. */
   brush: string;
+  /** Second handle colour (stripes), set by a wardrobe brush. */
+  brushStripe?: string;
+  /** Bristle colour, set by a wardrobe brush (default white). */
+  bristle?: string;
+  /** Glowing handle, set by a wardrobe brush. */
+  brushGlow?: boolean;
   /** Exposed skin (Batman's chin). */
   skin?: string;
 }
+
+export type AccessoryId = 'crown' | 'cap' | 'shades' | 'headphones' | 'bow';
 
 export interface Suit {
   id: string;
   name: string;
   palette: HeroPalette;
+  /** Wearable add-on chosen in the wardrobe. */
+  accessory?: AccessoryId;
 }
 
 export interface HeroPack {

@@ -1,24 +1,20 @@
 import { useEffect, useState } from 'react';
 import { sfx } from '../../audio/sfx';
 import { preloadVoices, say } from '../../audio/voice';
-import { isSuitUnlocked, SUIT_UNLOCK_STARS, starsForHero } from '../../game/scoring';
-import { useStore } from '../../game/store';
-import { HEROES, getSuit } from '../../heroes';
+import { useDressedSuits, useStore } from '../../game/store';
+import { HEROES } from '../../heroes';
 import { useT } from '../../i18n';
 import { HeroCarousel } from '../../scene/HeroCarousel';
-import { ArrowIcon, LockIcon, StarIcon } from '../components/Icons';
+import { ArrowIcon } from '../components/Icons';
 
 export function HeroSelect() {
   const go = useStore((s) => s.go);
   const heroId = useStore((s) => s.heroId);
   const selectHero = useStore((s) => s.selectHero);
-  const selectSuit = useStore((s) => s.selectSuit);
-  const suits = useStore((s) => s.settings.suits);
-  const sessions = useStore((s) => s.sessions);
+  const dressed = useDressedSuits();
   const [index, setIndex] = useState(() => Math.max(0, HEROES.findIndex((h) => h.id === heroId)));
   const hero = HEROES[index];
-  const suit = getSuit(hero, suits[hero.id]);
-  const { t, lang, heroName, suitName } = useT();
+  const { t, lang, heroName } = useT();
   const name = heroName(hero.id);
 
   useEffect(() => {
@@ -45,7 +41,7 @@ export function HeroSelect() {
 
   return (
     <div className="screen select" style={{ background: `radial-gradient(circle at 50% 30%, ${hero.ui.bg} 0%, #1b1340 70%)` }}>
-      <HeroCarousel index={index} suits={suits} />
+      <HeroCarousel index={index} suits={dressed} />
       <div className="select-overlay">
         <div className="select-top">
           <button className="btn btn-ghost btn-small" onClick={() => go('hub')}>
@@ -69,32 +65,16 @@ export function HeroSelect() {
             {name}
           </div>
           <div className="hero-tagline">{t(`hero.${hero.id}.tagline`)}</div>
-          <div className="suits">
-            {hero.suits.map((s, i) => {
-              const unlocked = isSuitUnlocked(sessions, hero.id, i);
-              const active = s.id === suit.id;
-              return (
-                <button
-                  key={s.id}
-                  className={`chip ${active ? 'active' : ''} ${unlocked ? '' : 'locked'}`}
-                  disabled={!unlocked}
-                  onClick={() => {
-                    sfx.tap();
-                    selectSuit(hero.id, s.id);
-                  }}
-                  title={unlocked ? suitName(hero.id, s.id) : t('select.lockedHint', { stars: SUIT_UNLOCK_STARS * i, hero: name })}
-                >
-                  <span className="swatch" style={{ background: `linear-gradient(135deg, ${s.palette.primary}, ${s.palette.secondary})` }} />
-                  {suitName(hero.id, s.id)}
-                  {!unlocked && (
-                    <span className="lock">
-                      <LockIcon /> {starsForHero(sessions, hero.id)}/{SUIT_UNLOCK_STARS * i} <StarIcon size={12} />
-                    </span>
-                  )}
-                </button>
-              );
-            })}
-          </div>
+          <button
+            className="btn btn-ghost ward-open"
+            onClick={() => {
+              sfx.tap();
+              selectHero(hero.id);
+              go('wardrobe');
+            }}
+          >
+            <span aria-hidden="true">👕</span> {t('wardrobe.open')}
+          </button>
           <button className="btn btn-big" style={{ background: hero.ui.fg, color: '#1b1340' }} onClick={start}>
             {t('select.start', { hero: name })}
           </button>

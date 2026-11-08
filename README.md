@@ -65,6 +65,10 @@ Add `?fast=1` to the URL to run the game clock at 10x (a full session takes 12 s
   switch and the parent link.
 - **Hero select**: 3D carousel of three procedurally built chibi heroes, each with two suits
   (the second unlocks after 6 stars earned with that hero).
+- **Wardrobe** (from hero select): per-hero brush style (6), suit colours (the hero's own suits
+  plus 5 colour sets) and a head add-on (shades, crown, bow, cap, headphones). Items unlock at
+  milestones of total stars or best day streak (`src/game/wardrobe.ts`); nothing is spent. New
+  unlocks are announced on the victory screen.
 - **The brushing lesson (2:00)**: one scene, no monsters. The hero holds a realistic toothbrush
   (rectangular head with bristle tufts, angled neck, pea of striped paste) and demonstrates the
   modified Bass technique on a giant, anatomically shaped set of teeth, segment by segment:
