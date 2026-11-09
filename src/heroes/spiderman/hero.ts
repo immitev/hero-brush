@@ -10,11 +10,11 @@ export const spiderman: HeroPack = {
       id: 'classic',
       name: 'Classic',
       palette: {
-        primary: '#d7263d',
-        secondary: '#1d4ed8',
-        accent: '#5a0b17',
+        primary: '#a463f2',
+        secondary: '#ffcf3f',
+        accent: '#9150e0',
         glow: '#ffffff',
-        brush: '#1d4ed8',
+        brush: '#ffcf3f',
       },
     },
     {
@@ -29,5 +29,5 @@ export const spiderman: HeroPack = {
       },
     },
   ],
-  ui: { bg: '#1e3a8a', fg: '#ff6b6b' },
+  ui: { bg: '#3b2a8a', fg: '#ffd84d' },
 };

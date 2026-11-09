@@ -47,7 +47,7 @@ describe('translate', () => {
     expect(bgT.tn('victory.streak', 1)).toBe('1 ден поред');
     expect(bgT.tn('victory.streak', 3)).toBe('3 дни поред');
     expect(bgT.heroName('ironman')).toBe('Железарко');
-    expect(bgT.suitName('batman', 'classic')).toBe('Черният рицар');
+    expect(bgT.suitName('batman', 'classic')).toBe('Нощен пазач');
     expect(bgT.heroName('unknown')).toBe('unknown');
   });
 

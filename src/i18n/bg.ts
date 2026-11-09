@@ -34,7 +34,7 @@ export const bg: Messages = {
   'suit.ironman.stealth': 'Невидим',
   'suit.spiderman.classic': 'Класически',
   'suit.spiderman.mint': 'Ментова паста',
-  'suit.batman.classic': 'Черният рицар',
+  'suit.batman.classic': 'Нощен пазач',
   'suit.batman.blue': 'Синият рицар',
 
   'seg.upper-outer-left': 'Горе вляво, отвън',

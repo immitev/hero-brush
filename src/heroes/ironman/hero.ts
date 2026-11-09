@@ -10,11 +10,11 @@ export const ironman: HeroPack = {
       id: 'classic',
       name: 'Classic',
       palette: {
-        primary: '#c8102e',
-        secondary: '#f2b134',
-        accent: '#8a0b1f',
-        glow: '#8ff7ff',
-        brush: '#f2b134',
+        primary: '#5f7fa8',
+        secondary: '#ff9f43',
+        accent: '#2c3e57',
+        glow: '#8ff7d4',
+        brush: '#ff9f43',
       },
     },
     {
@@ -29,5 +29,5 @@ export const ironman: HeroPack = {
       },
     },
   ],
-  ui: { bg: '#5a0f1f', fg: '#ffd166' },
+  ui: { bg: '#1f3350', fg: '#ffb46b' },
 };

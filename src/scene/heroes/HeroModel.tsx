@@ -311,11 +311,11 @@ function IronMan({ suit, anim }: HeroModelProps) {
         <mesh position={[0, 0.02, 0.2]} scale={[1, 1.1, 0.5]} material={m.gold}>
           <sphereGeometry args={[0.2, 14, 10]} />
         </mesh>
-        <mesh position={[0, 0.08, 0.31]} rotation={[Math.PI / 2, 0, 0]} material={m.glow}>
-          <cylinderGeometry args={[0.085, 0.085, 0.06, 16]} />
+        <mesh position={[0, 0.06, 0.3]} rotation={[0, 0, Math.PI / 4]} material={m.dark}>
+          <boxGeometry args={[0.17, 0.17, 0.05]} />
         </mesh>
-        <mesh position={[0, 0.08, 0.3]} rotation={[Math.PI / 2, 0, 0]} material={m.dark}>
-          <torusGeometry args={[0.1, 0.025, 8, 18]} />
+        <mesh position={[0, 0.06, 0.32]} rotation={[0, 0, Math.PI / 4]} material={m.glow}>
+          <boxGeometry args={[0.1, 0.1, 0.05]} />
         </mesh>
         <group ref={refs.armL} position={[-0.36, 0.2, 0]}>
           <mesh material={m.gold}>
@@ -349,14 +349,22 @@ function IronMan({ suit, anim }: HeroModelProps) {
         <mesh position={[0, -0.03, 0.2]} scale={[0.78, 0.82, 0.62]} material={m.gold}>
           <sphereGeometry args={[HEAD_R, 24, 18]} />
         </mesh>
-        <mesh position={[-0.15, 0.06, 0.44]} rotation={[0, -0.25, 0]} material={m.glow}>
-          <boxGeometry args={[0.15, 0.05, 0.04]} />
+        <mesh position={[0, 0.05, 0.39]} scale={[1, 0.42, 0.35]} material={m.dark}>
+          <sphereGeometry args={[0.3, 20, 12]} />
         </mesh>
-        <mesh position={[0.15, 0.06, 0.44]} rotation={[0, 0.25, 0]} material={m.glow}>
-          <boxGeometry args={[0.15, 0.05, 0.04]} />
+        {[-1, 1].map((s) => (
+          <mesh key={s} position={[s * 0.1, 0.06, 0.48]} material={m.glow}>
+            <sphereGeometry args={[0.045, 12, 10]} />
+          </mesh>
+        ))}
+        <mesh position={[0, -0.17, 0.44]} rotation={[0, 0, Math.PI]} material={m.dark}>
+          <torusGeometry args={[0.07, 0.016, 6, 14, Math.PI]} />
         </mesh>
-        <mesh position={[0, -0.16, 0.45]} material={m.dark}>
-          <boxGeometry args={[0.16, 0.025, 0.03]} />
+        <mesh position={[0, HEAD_R + 0.08, 0]} material={m.gold}>
+          <cylinderGeometry args={[0.015, 0.015, 0.16, 6]} />
+        </mesh>
+        <mesh position={[0, HEAD_R + 0.17, 0]} material={m.glow}>
+          <sphereGeometry args={[0.045, 10, 8]} />
         </mesh>
       </group>
     </group>
@@ -455,12 +463,12 @@ function SpiderMan({ suit, anim }: HeroModelProps) {
               <sphereGeometry args={[HEAD_R, 24, 18]} />
             </mesh>
             {[-1, 1].map((s) => (
-              <group key={s} position={[s * 0.17, 0.05, 0.36]} rotation={[0.15, s * 0.45, s * 0.35]}>
-                <mesh scale={[1.18, 1.55, 0.45]} position={[0, 0, -0.03]} material={m.eyeRim}>
-                  <sphereGeometry args={[0.14, 16, 12]} />
+              <group key={s} position={[s * 0.15, 0.06, 0.41]} rotation={[0, s * 0.35, 0]}>
+                <mesh scale={[1, 1.1, 0.5]} material={m.eyeWhite}>
+                  <sphereGeometry args={[0.1, 16, 12]} />
                 </mesh>
-                <mesh scale={[1, 1.4, 0.4]} position={[0, 0, 0.04]} material={m.eyeWhite}>
-                  <sphereGeometry args={[0.13, 16, 12]} />
+                <mesh scale={[1, 1, 0.5]} position={[0, -0.01, 0.045]} material={m.eyeRim}>
+                  <sphereGeometry args={[0.048, 12, 10]} />
                 </mesh>
               </group>
             ))}
@@ -539,8 +547,11 @@ function Batman({ suit, anim }: HeroModelProps) {
         <mesh material={m.grey}>
           <capsuleGeometry args={[0.3, 0.32, 6, 14]} />
         </mesh>
-        <mesh position={[0, 0.1, 0.27]} scale={[1.4, 0.8, 0.3]} material={m.black}>
-          <sphereGeometry args={[0.13, 14, 10]} />
+        <mesh position={[0, 0.1, 0.29]} scale={[1, 1, 0.35]} material={m.belt}>
+          <sphereGeometry args={[0.09, 14, 10]} />
+        </mesh>
+        <mesh position={[0.04, 0.12, 0.31]} scale={[1, 1, 0.35]} material={m.grey}>
+          <sphereGeometry args={[0.075, 14, 10]} />
         </mesh>
         <mesh position={[0, -0.2, 0]} rotation={[Math.PI / 2, 0, 0]} material={m.belt}>
           <torusGeometry args={[0.3, 0.045, 8, 20]} />
@@ -581,20 +592,18 @@ function Batman({ suit, anim }: HeroModelProps) {
         <mesh position={[0, 0.03, -0.1]} material={m.black}>
           <sphereGeometry args={[HEAD_R * 1.0, 24, 18, 0, Math.PI * 2, 0, Math.PI * 0.8]} />
         </mesh>
-        <mesh position={[-0.24, 0.5, 0]} rotation={[0, 0, 0.25]} material={m.black}>
-          <coneGeometry args={[0.1, 0.32, 10]} />
-        </mesh>
-        <mesh position={[0.24, 0.5, 0]} rotation={[0, 0, -0.25]} material={m.black}>
-          <coneGeometry args={[0.1, 0.32, 10]} />
-        </mesh>
-        <mesh position={[-0.15, 0.07, 0.43]} rotation={[0, -0.3, 0.2]} material={m.eyes}>
-          <boxGeometry args={[0.14, 0.05, 0.03]} />
-        </mesh>
-        <mesh position={[0.15, 0.07, 0.43]} rotation={[0, 0.3, -0.2]} material={m.eyes}>
-          <boxGeometry args={[0.14, 0.05, 0.03]} />
-        </mesh>
-        <mesh position={[0, -0.2, 0.42]} material={m.black}>
-          <boxGeometry args={[0.12, 0.02, 0.02]} />
+        {[-1, 1].map((s) => (
+          <mesh key={s} position={[s * 0.27, 0.42, -0.02]} rotation={[0, 0, -s * 0.45]} scale={[0.6, 1, 0.35]} material={m.black}>
+            <sphereGeometry args={[0.16, 14, 10]} />
+          </mesh>
+        ))}
+        {[-1, 1].map((s) => (
+          <mesh key={s} position={[s * 0.14, 0.07, 0.42]} scale={[1, 1.15, 0.5]} material={m.eyes}>
+            <sphereGeometry args={[0.055, 12, 10]} />
+          </mesh>
+        ))}
+        <mesh position={[0, -0.17, 0.43]} rotation={[0, 0, Math.PI]} material={m.black}>
+          <torusGeometry args={[0.06, 0.014, 6, 14, Math.PI]} />
         </mesh>
       </group>
     </group>

@@ -35,7 +35,7 @@ export const en = {
   'suit.ironman.stealth': 'Stealth',
   'suit.spiderman.classic': 'Classic',
   'suit.spiderman.mint': 'Toothpaste Mint',
-  'suit.batman.classic': 'Dark Knight',
+  'suit.batman.classic': 'Night Watch',
   'suit.batman.blue': 'Blue Knight',
 
   'seg.upper-outer-left': 'Top left, outside',

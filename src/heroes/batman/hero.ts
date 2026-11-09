@@ -10,11 +10,11 @@ export const batman: HeroPack = {
       id: 'classic',
       name: 'Dark Knight',
       palette: {
-        primary: '#4a4f5c',
-        secondary: '#15171c',
-        accent: '#f2c14e',
+        primary: '#6a4c9c',
+        secondary: '#2d2150',
+        accent: '#5ee6d0',
         glow: '#ffffff',
-        brush: '#f2c14e',
+        brush: '#5ee6d0',
         skin: '#f1c9a5',
       },
     },
@@ -31,5 +31,5 @@ export const batman: HeroPack = {
       },
     },
   ],
-  ui: { bg: '#1a1d26', fg: '#f2c14e' },
+  ui: { bg: '#241a3d', fg: '#7ef0dc' },
 };
