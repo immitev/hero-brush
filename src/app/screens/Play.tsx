@@ -16,6 +16,24 @@ export function Play() {
   const suit = useDressedSuit(hero);
   const session = useSessionRunner(hero);
   const { heroName } = useT();
+  const { phase, paused, pause, resume } = session;
+
+  // Keyboard on a PC: Space pauses / resumes, Escape pauses.
+  useEffect(() => {
+    if (phase !== 'playing' && phase !== 'countdown') return;
+    const onKey = (e: KeyboardEvent) => {
+      if (e.repeat || e.ctrlKey || e.altKey || e.metaKey) return;
+      if (e.code === 'Space' || e.key === ' ') {
+        e.preventDefault(); // don't also "click" the focused button
+        if (paused) resume();
+        else pause();
+      } else if (e.key === 'Escape' && !paused) {
+        pause();
+      }
+    };
+    window.addEventListener('keydown', onKey);
+    return () => window.removeEventListener('keydown', onKey);
+  }, [phase, paused, pause, resume]);
 
   return (
     <div className="screen play">
