@@ -154,13 +154,18 @@ describe('applyStress', () => {
   it('adds a combining acute after the stressed vowel and keeps capitals', () => {
     expect(applyStress('Четката до венеца!', dict)).toBe('Че́тката до венеца́!');
   });
+  it('needs a per-line choice for homographs', () => {
+    const d = { прави: ['прАви', 'правИ'] };
+    expect(applyStress('прави', d)).toBe('прави');
+    expect(applyStress('Прави', d, { прави: 'прАви' })).toBe('Пра́ви');
+  });
   it('leaves unknown words and missing dictionaries alone', () => {
     expect(applyStress('Малки кръгчета.', dict)).toBe('Малки кръгчета.');
     expect(applyStress('Четката', undefined)).toBe('Четката');
   });
   it('is applied to the SSML of the matching language only', () => {
     const voices = { languages: { bg: { xmlLang: 'bg-BG', speakers: { n: { voice: 'V' } } }, en: { xmlLang: 'en-US', speakers: { n: { voice: 'E' } } } } };
-    const jobs = buildJobs({ n: { a: { en: 'Brush', bg: 'Четката' } } }, voices, { bg: dict });
+    const jobs = buildJobs({ n: { a: { en: 'Brush', bg: 'Четката' } } }, voices, { bg: { words: dict } });
     expect(jobs.find((j) => j.lang === 'bg').ssml).toContain('Че́тката');
     expect(jobs.find((j) => j.lang === 'bg').text).toBe('Четката');
   });

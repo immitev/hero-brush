@@ -98,15 +98,18 @@ const VOWELS = 'аеиоуъюяѝ';
 /**
  * Marks word stress for the TTS engine: every word found in `dict` (lower-case word -> the same
  * word with its stressed vowel in upper case) gets a combining acute accent (U+0301) after that
- * vowel. The original capitalisation is kept. Unknown words are left alone.
+ * vowel. The original capitalisation is kept. Unknown words, and homographs (an array of
+ * possible forms) that `overrides` does not resolve, are left alone.
  * @param {string} text
- * @param {Record<string, string> | undefined} dict
+ * @param {Record<string, string | string[]> | undefined} dict
+ * @param {Record<string, string>} [overrides] per-line choices for homographs
  */
-export function applyStress(text, dict) {
+export function applyStress(text, dict, overrides = {}) {
   if (!dict) return text;
   return text.replace(/\p{L}+/gu, (word) => {
-    const marked = dict[word.toLowerCase()];
-    if (!marked) return word;
+    const key = word.toLowerCase();
+    const marked = overrides[key] ?? dict[key];
+    if (typeof marked !== 'string') return word;
     let out = '';
     for (let i = 0; i < word.length; i++) {
       out += word[i];
@@ -121,7 +124,8 @@ export function applyStress(text, dict) {
  * Expands lines.json + voices.json into one job per (lang, speaker, line).
  * @param {Record<string, Record<string, Record<string, string>>>} lines speaker -> lineId -> lang -> text
  * @param {{ languages: Record<string, { xmlLang: string, silence?: { leading?: string, tailing?: string }, speakers: Record<string, VoiceSpec> }> }} voices
- * @param {Record<string, Record<string, string>>} [stress] lang -> stress dictionary (see applyStress)
+ * @param {Record<string, { words: Record<string, string | string[]>, lines?: Record<string, Record<string, string>> }>} [stress]
+ *   lang -> stress dictionary plus per-line ("speaker.lineId") homograph choices (see applyStress)
  */
 export function buildJobs(lines, voices, stress = {}) {
   const jobs = [];
@@ -132,7 +136,7 @@ export function buildJobs(lines, voices, stress = {}) {
       for (const [lineId, texts] of Object.entries(byId)) {
         const text = texts[lang];
         if (!text || !text.trim()) throw new Error(`lines.json: ${speaker}.${lineId} has no ${lang} text`);
-        const ssml = buildSsml(spec, applyStress(text, stress[lang]), cfg.xmlLang, cfg.silence);
+        const ssml = buildSsml(spec, applyStress(text, stress[lang]?.words, stress[lang]?.lines?.[`${speaker}.${lineId}`]), cfg.xmlLang, cfg.silence);
         jobs.push({
           lang,
           speaker,

@@ -80,21 +80,36 @@ describe('voice queue policy', () => {
     expect(decide('normal', 'normal', 0)).toBe('enqueue');
     expect(decide('normal', 'high', 0)).toBe('enqueue');
   });
+  const STRESS = stress.bg as { words: Record<string, string | string[]>; lines: Record<string, Record<string, string>> };
+  const bgWords = (speaker: string, id: string) =>
+    [...lineText('bg', speaker as never, id).toLowerCase().matchAll(/[а-яѝ]+/g)].map(([w]) => w).filter((w) => (w.match(/[аеиоуъюя]/g) ?? []).length > 1);
+
   it('every Bulgarian word of 2+ syllables has a stress entry', () => {
-    const dict: Record<string, string> = stress.bg;
     const missing = new Set<string>();
-    for (const speaker of SPEAKERS)
-      for (const id of Object.keys(LINES[speaker]))
-        for (const [w] of lineText('bg', speaker, id).toLowerCase().matchAll(/[а-яѝ]+/g))
-          if ((w.match(/[аеиоуъюя]/g) ?? []).length > 1 && !dict[w]) missing.add(w);
+    for (const speaker of SPEAKERS) for (const id of Object.keys(LINES[speaker])) for (const w of bgWords(speaker, id)) if (!STRESS.words[w]) missing.add(w);
     expect([...missing]).toEqual([]);
   });
 
-  it('stress entries mark exactly one vowel of the same word', () => {
-    for (const [word, marked] of Object.entries(stress.bg as Record<string, string>)) {
-      expect(marked.toLowerCase(), word).toBe(word);
-      expect(marked.match(/[АЕИОУЪЮЯ]/g)?.length, word).toBe(1);
-      expect(marked.replace(/[АЕИОУЪЮЯ]/, '').match(/[А-Я]/), word).toBeNull();
+  it('homographs are resolved per line, with one of their listed forms', () => {
+    for (const speaker of SPEAKERS)
+      for (const id of Object.keys(LINES[speaker]))
+        for (const w of bgWords(speaker, id)) {
+          const forms = STRESS.words[w];
+          if (!Array.isArray(forms)) continue;
+          expect(forms, `${speaker}.${id}: ${w}`).toContain(STRESS.lines[`${speaker}.${id}`]?.[w]);
+        }
+    for (const [key, choice] of Object.entries(STRESS.lines)) {
+      const [speaker, id] = key.split('.');
+      for (const w of Object.keys(choice)) expect(bgWords(speaker, id), key).toContain(w);
     }
+  });
+
+  it('stress entries mark exactly one vowel of the same word', () => {
+    for (const [word, entry] of Object.entries(STRESS.words))
+      for (const marked of [entry].flat()) {
+        expect(marked.toLowerCase(), word).toBe(word);
+        expect(marked.match(/[АЕИОУЪЮЯ]/g)?.length, word).toBe(1);
+        expect(marked.replace(/[АЕИОУЪЮЯ]/, '').match(/[А-Я]/), word).toBeNull();
+      }
   });
 });

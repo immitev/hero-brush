@@ -13,7 +13,7 @@ export default defineConfig({
       manifest: {
         name: 'Супер Четка',
         short_name: 'Супер Четка',
-        description: 'Супергерои учат децата как правилно да мият зъбите си за две минути.',
+        description: 'Супергерои учат децата да мият зъбите си: две минути, всяко зъбче, нежно и старателно.',
         lang: 'bg',
         theme_color: '#1b1340',
         background_color: '#1b1340',
