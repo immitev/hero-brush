@@ -29,7 +29,7 @@
   },
   "spiderman": {
     "select": { "en": "Your friendly neighbourhood tooth brusher!", "bg": "Твоят приятел от квартала е тук. Хайде да четкаме!" },
-    "quip1": { "en": "Tiny circles, like spinning a web!", "bg": "Мънички кръгчета, като плета паяжина!" },
+    "quip1": { "en": "Tiny circles, like spinning a web!", "bg": "Мънички кръгчета, както плета паяжина!" },
     "quip2": { "en": "My spider-sense says: don't forget the back teeth!", "bg": "Паешкото ми чувство казва: не забравяй кътниците!" },
     "quip3": { "en": "Flick it up, flick it down! Woo-hoo!", "bg": "Четкай нагоре, четкай надолу! Ихууу!" },
     "victory": { "en": "All scrubbed up. Great job, buddy!", "bg": "Всичко е излъскано! Браво, приятел!" }
