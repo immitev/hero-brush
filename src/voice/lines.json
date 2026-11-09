@@ -9,9 +9,9 @@
     "seg2": { "en": "Bottom left, outside. Small circles along the gum, nice and gentle.", "bg": "Долу вляво, отвън. Малки кръгчета покрай венеца, съвсем лекичко." },
     "seg3": { "en": "Bottom right, outside. Small circles, two teeth at a time.", "bg": "Долу вдясно, отвън. Малки кръгчета, по две зъбчета наведнъж." },
     "seg4": { "en": "Open wide! Top back teeth, inside. Small circles, close to the gum.", "bg": "Отвори широко! Горните кътници отвътре. Малки кръгчета, близо до венеца." },
-    "seg5": { "en": "Top front teeth, inside. Hold the brush up and down and flick down from the gum.", "bg": "Горните предни зъбки отвътре. Дръж четката изправена и мети надолу от венеца." },
+    "seg5": { "en": "Top front teeth, inside. Hold the brush up and down and flick down from the gum.", "bg": "Горните предни зъбки отвътре. Дръж четката изправена и четкай надолу от венеца." },
     "seg6": { "en": "Bottom back teeth, inside. Small circles, close to the gum.", "bg": "Долните кътници отвътре. Малки кръгчета, близо до венеца." },
-    "seg7": { "en": "Bottom front teeth, inside. Brush up and down, flicking up from the gum.", "bg": "Долните предни зъбки отвътре. Четката изправена, мети нагоре от венеца." },
+    "seg7": { "en": "Bottom front teeth, inside. Brush up and down, flicking up from the gum.", "bg": "Долните предни зъбки отвътре. Четката изправена, четкай нагоре от венеца." },
     "seg8": { "en": "Chewing surfaces! Lay the brush flat and scrub back and forth.", "bg": "Дъвкателните повърхности! Сложи четката легнала и търкай напред-назад." },
     "seg9": { "en": "Last one: the tongue. Gentle strokes from the back to the front.", "bg": "Накрая езикът. Леки движения отзад напред." },
     "praise1": { "en": "Gentle pressure. Let the bristles do the work.", "bg": "Натискай лекичко. Космиците вършат работата." },
@@ -31,7 +31,7 @@
     "select": { "en": "Your friendly neighbourhood tooth brusher!", "bg": "Твоят приятел от квартала е тук. Хайде да четкаме!" },
     "quip1": { "en": "Tiny circles, like spinning a web!", "bg": "Мънички кръгчета, като плета паяжина!" },
     "quip2": { "en": "My spider-sense says: don't forget the back teeth!", "bg": "Паешкото ми чувство казва: не забравяй кътниците!" },
-    "quip3": { "en": "Flick it up, flick it down! Woo-hoo!", "bg": "Мети нагоре, мети надолу! Ихууу!" },
+    "quip3": { "en": "Flick it up, flick it down! Woo-hoo!", "bg": "Четкай нагоре, четкай надолу! Ихууу!" },
     "victory": { "en": "All scrubbed up. Great job, buddy!", "bg": "Всичко е излъскано! Браво, приятел!" }
   },
   "batman": {

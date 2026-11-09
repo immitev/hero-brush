@@ -100,6 +100,10 @@ const VOWELS = 'аеиоуъюяѝ';
  * word with its stressed vowel in upper case) gets a combining acute accent (U+0301) after that
  * vowel. The original capitalisation is kept. Unknown words, and homographs (an array of
  * possible forms) that `overrides` does not resolve, are left alone.
+ *
+ * A stressed final closed syllable (отвЪн, давАй, назАд) is NOT marked: Azure's Bulgarian voices
+ * then add a short extra vowel at the end of the word ("отвънъ"), and they stress these words
+ * on the last syllable by default anyway.
  * @param {string} text
  * @param {Record<string, string | string[]> | undefined} dict
  * @param {Record<string, string>} [overrides] per-line choices for homographs
@@ -110,6 +114,9 @@ export function applyStress(text, dict, overrides = {}) {
     const key = word.toLowerCase();
     const marked = overrides[key] ?? dict[key];
     if (typeof marked !== 'string') return word;
+    const at = [...marked].findIndex((c) => c !== c.toLowerCase() && VOWELS.includes(c.toLowerCase()));
+    const tail = key.slice(at + 1);
+    if (at >= 0 && tail.length > 0 && ![...tail].some((c) => VOWELS.includes(c))) return word;
     let out = '';
     for (let i = 0; i < word.length; i++) {
       out += word[i];

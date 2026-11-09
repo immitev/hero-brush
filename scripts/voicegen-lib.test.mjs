@@ -154,6 +154,10 @@ describe('applyStress', () => {
   it('adds a combining acute after the stressed vowel and keeps capitals', () => {
     expect(applyStress('Четката до венеца!', dict)).toBe('Че́тката до венеца́!');
   });
+  it('does not mark a stressed final closed syllable (the voice would add a vowel)', () => {
+    expect(applyStress('Горе, отвън! Давай!', { отвън: 'отвЪн', горе: 'гОре', давай: 'давАй' })).toBe('Го́ре, отвън! Давай!');
+    expect(applyStress('венеца', { венеца: 'венецА' })).toBe('венеца́');
+  });
   it('needs a per-line choice for homographs', () => {
     const d = { прави: ['прАви', 'правИ'] };
     expect(applyStress('прави', d)).toBe('прави');
