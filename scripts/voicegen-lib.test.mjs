@@ -10,6 +10,7 @@ import {
   isRetryable,
   lineHash,
   planJobs,
+  resolveElevenKey,
   resolveKey,
   retryDelayMs,
   staleFiles,
@@ -172,5 +173,26 @@ describe('applyStress', () => {
     const jobs = buildJobs({ n: { a: { en: 'Brush', bg: 'Четката' } } }, voices, { bg: { words: dict } });
     expect(jobs.find((j) => j.lang === 'bg').ssml).toContain('Че́тката');
     expect(jobs.find((j) => j.lang === 'bg').text).toBe('Четката');
+  });
+});
+
+describe('ElevenLabs', () => {
+  const dict = { прави: ['прАви', 'правИ'], венеца: 'венЕца', отвън: 'отвЪн' };
+  it('marks the stressed vowel as a capital, including final closed syllables', () => {
+    expect(applyStress('Отвън, до венеца и прави кръгчета.', dict, { прави: 'правИ' }, 'caps')).toBe('ОтвЪн, до венЕца и правИ кръгчета.');
+    expect(applyStress('Прави!', dict, {}, 'caps')).toBe('Прави!');
+  });
+  it('builds a JSON request for elevenlabs speakers and hashes it', () => {
+    const v = { languages: { bg: { xmlLang: 'bg-BG', speakers: { n: { provider: 'elevenlabs', voice: 'ID1', model: 'eleven_v3' } } } } };
+    const [job] = buildJobs({ n: { a: { bg: 'До венеца.' } } }, v, { bg: { words: dict } });
+    expect(job.provider).toBe('elevenlabs');
+    expect(JSON.parse(job.body)).toEqual({ text: 'До венЕца.', model_id: 'eleven_v3', language_code: 'bg' });
+    const [other] = buildJobs({ n: { a: { bg: 'До венеца!' } } }, v, { bg: { words: dict } });
+    expect(other.hash).not.toBe(job.hash);
+  });
+  it('resolves the ElevenLabs key from env or file without the Azure one', () => {
+    expect(resolveElevenKey({ ELEVENLABS_API_KEY: ' k ' }, () => { throw new Error(); }, '/h').key).toBe('k');
+    expect(resolveElevenKey({}, () => Buffer.from('abc\r\n'), '/h').key).toBe('abc');
+    expect(resolveElevenKey({}, () => { throw new Error(); }, '/h').key).toBeNull();
   });
 });

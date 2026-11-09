@@ -14,10 +14,10 @@
       "xmlLang": "bg-BG",
       "silence": { "leading": "50ms", "tailing": "150ms" },
       "speakers": {
-        "narrator": { "voice": "bg-BG-KalinaNeural", "locale": "bg-BG", "rate": "-3%", "pitch": "+5%", "fallback": { "pitch": 1.2, "rate": 0.95 } },
-        "ironman": { "voice": "en-US-AndrewMultilingualNeural", "locale": "en-US", "fallback": { "pitch": 0.95, "rate": 1.0 } },
-        "spiderman": { "voice": "bg-BG-BorislavNeural", "locale": "bg-BG", "rate": "+14%", "pitch": "+14%", "fallback": { "pitch": 1.35, "rate": 1.15 } },
-        "batman": { "voice": "bg-BG-BorislavNeural", "locale": "bg-BG", "rate": "-14%", "pitch": "-16%", "fallback": { "pitch": 0.6, "rate": 0.85 } }
+        "narrator": { "provider": "elevenlabs", "name": "Sarah", "voice": "EXAVITQu4vr4xnSDxMaL", "model": "eleven_v3", "fallback": { "pitch": 1.2, "rate": 0.95 } },
+        "ironman": { "provider": "elevenlabs", "name": "Roger", "voice": "CwhRBWXzGAHq8TQ4Fs17", "model": "eleven_v3", "fallback": { "pitch": 0.95, "rate": 1.0 } },
+        "spiderman": { "provider": "elevenlabs", "name": "Liam", "voice": "TX3LPaxmHKxFdv7VOQHJ", "model": "eleven_v3", "fallback": { "pitch": 1.35, "rate": 1.15 } },
+        "batman": { "provider": "elevenlabs", "name": "Bill", "voice": "pqHfZKP75CvOlQylNhV4", "model": "eleven_v3", "fallback": { "pitch": 0.6, "rate": 0.85 } }
       }
     }
   }

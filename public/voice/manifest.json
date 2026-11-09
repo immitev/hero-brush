@@ -3,145 +3,145 @@
     "batman": {
       "quip1": {
         "file": "bg/batman/quip1.mp3",
-        "hash": "4155304f523bb30da4cead97b0b4f97cf8af7644dc9258f6166821f942095ba6"
+        "hash": "8cfc75e83869454cdb85b10c2cf4cb267cb32051adcc12a34f02239b95c6286e"
       },
       "quip2": {
         "file": "bg/batman/quip2.mp3",
-        "hash": "95f5558f52635b36d803245c03df1e6df6fa21b3833ec70e0a492ddb79ac1c54"
+        "hash": "3c85030ef9bd3bdada7de956bde68971d67826750601758db7b3273a04d1119b"
       },
       "quip3": {
         "file": "bg/batman/quip3.mp3",
-        "hash": "2efe498e939ac9e5f9a5c2923b5a76661c54e1ae3135bb46ba3dd4f8c9518dd5"
+        "hash": "a99bee0b53d6c86c92168390da82ac02a4bae89126cd14870042b9a7db20bd7a"
       },
       "select": {
         "file": "bg/batman/select.mp3",
-        "hash": "1029da69715b426dccf4f6d5293e96f97fd9f820af083b0f9aa8612cb8d81377"
+        "hash": "225b0e8445873863b6c459c348ee34d5064edadae4f7fd172282fc811b33f7f1"
       },
       "victory": {
         "file": "bg/batman/victory.mp3",
-        "hash": "11fec2158f6f037cb78bc25e1ceed390c1cf283d7d04f182bdf0aaa29c8c0243"
+        "hash": "2bd346e90abaf1a6a13f9e242efc41ab2336b9db4d9c5ef39f772108cb1c68fb"
       }
     },
     "ironman": {
       "quip1": {
         "file": "bg/ironman/quip1.mp3",
-        "hash": "2fbda4ec88128ff23fecb30c9d384a546b6d4c87f8abb133bdecbfe0ae4baa18"
+        "hash": "b91344a741c23ef019ca387ded18fcad38b7f62a1fc778d90cbb7ade04e54156"
       },
       "quip2": {
         "file": "bg/ironman/quip2.mp3",
-        "hash": "2318b0cde6c6643c168a654406482a7539d80926253d5f0bfba82c822885adbe"
+        "hash": "287bb7dd3ee0433f2db2398b20e88c9841a4fe54ca4d00dc639f3112f3dab859"
       },
       "quip3": {
         "file": "bg/ironman/quip3.mp3",
-        "hash": "1b2fb4316c817b1bea37025a41977fb6018fa691156e25696d535d150586802b"
+        "hash": "625af54efadd3a345c4c3ac3c55ef30196566a7e4da517873a8548f20c5773f5"
       },
       "select": {
         "file": "bg/ironman/select.mp3",
-        "hash": "6c4f82f915c2ae4500601e8413248ed75b5b01c345f07b7fa3d447b0c076837d"
+        "hash": "e962d2fe28d5dbda57f1953e493d3c6adab05a2546ec40b22626559be51bc352"
       },
       "victory": {
         "file": "bg/ironman/victory.mp3",
-        "hash": "49174bb1df42e0a800561c43781024f60bcdca34a3a43ae27071a48a5c43d073"
+        "hash": "a695eb4f2683f3266da5b120141843a46ecc49c3dbff7b0c1f7cedccdd3f57c9"
       }
     },
     "narrator": {
       "almost": {
         "file": "bg/narrator/almost.mp3",
-        "hash": "8e33b7f1e60d66c111396dd6282ae44b91d97244207ba7bfe30b087a8b5f4cac"
+        "hash": "3bc08df41d06f5e0b56de8efd72a1bc22cc6235622b32f6f7aa2824454c9ae1f"
       },
       "count1": {
         "file": "bg/narrator/count1.mp3",
-        "hash": "4383671c86dd1891698b8784b5b5bbab122eb3dd3e915c99b8921a2df4aa6d6e"
+        "hash": "d62100c8a4a71cecb8cdc4ba3fbb946121a2c6b94b99b78702da9ebfdc3c1768"
       },
       "count2": {
         "file": "bg/narrator/count2.mp3",
-        "hash": "8a5aba170c52801a602d80e67c721af5a60da2fc43468af66439c95c0c2d422b"
+        "hash": "4b468cd919e3e8d5cbd64ce1aa77a1a4eaf4f65984bd9ef61f5b2b2b3b988bfc"
       },
       "count3": {
         "file": "bg/narrator/count3.mp3",
-        "hash": "e411d2de2cb2e98655cd0eeda09eb0f8eb33b71e0ee64a69e472db1a03076ec7"
+        "hash": "6dbbd2def902ae336034aa88ab66862444217a89a8b54a4161d188439114ff0c"
       },
       "go": {
         "file": "bg/narrator/go.mp3",
-        "hash": "ba6b21c79467ee018b8a4e7e088503e7d0dd60e227a2d6aa5a1c8df4cc280e35"
+        "hash": "038fecc9c1e7fb2aa25507af5a62426acb47c54238c12eb6bd6ef6904f55b3a7"
       },
       "goodTry": {
         "file": "bg/narrator/goodTry.mp3",
-        "hash": "1cd5d97814c6995e8d6145b7776586f0a61bbb15dd91c91c155d205afd6f2913"
+        "hash": "4ff4474860f67eab26949dcfd27c6914b640065aa13b8ef7382e37a4ff4ce9b2"
       },
       "praise1": {
         "file": "bg/narrator/praise1.mp3",
-        "hash": "a2bcac23f1f08b24d47353f7f8b062b53eeed58fed596e314db410c43b5e31e6"
+        "hash": "e723e227f3b43af37982498db88b22152a71cbce9a6d88be662add0b32dd6386"
       },
       "praise2": {
         "file": "bg/narrator/praise2.mp3",
-        "hash": "97fd1c20c41aec416c9518f6b300ea5c0afe1d488a57e9455b1a3f676f7f7967"
+        "hash": "8ef405c6bac59a38271c8bc6653fda1e89b62e1758718cdca0717966c0911ca1"
       },
       "seg0": {
         "file": "bg/narrator/seg0.mp3",
-        "hash": "9d277ae8186b139f3c267f800f3e5c4cd960e4dbe3a34dc8ac3795ee96f59aae"
+        "hash": "7e93d14d857465e81c23ec2d845554e050930840a9623681647b733aa1622266"
       },
       "seg1": {
         "file": "bg/narrator/seg1.mp3",
-        "hash": "daf60ef17d237c66da60b4f12165b8f4d6e6551bf3614d5125bf0c24736b2860"
+        "hash": "6c80b30a624413559890dbde8fee87035f0fc72c6fc673c1e9d13e892bb6749d"
       },
       "seg2": {
         "file": "bg/narrator/seg2.mp3",
-        "hash": "72fe23b83f7dba1e96dd4afa69c85524ea4306e7abcdb290bd5a4e55da402722"
+        "hash": "9d9ba5e6eac9f1496a35ea1565fdf6e583e7114877434c6abf5371afb1e27613"
       },
       "seg3": {
         "file": "bg/narrator/seg3.mp3",
-        "hash": "69576a56ab05beb4542bb6fb7fc71adb63de944b461536375df7f2292622e9dc"
+        "hash": "6d8a905c33841f8ffcd32b2a1625dce1f392ee60d6066b8a073bc52c8cc2eebe"
       },
       "seg4": {
         "file": "bg/narrator/seg4.mp3",
-        "hash": "c4188d5f683362efbf9bcde8ecdf7c7b90676d438c199edde7d818cf535aa8a3"
+        "hash": "cc8bb422e674b9aef5c87322d884508e4d722cc5dcbc4852c4a26f5e9bb61d15"
       },
       "seg5": {
         "file": "bg/narrator/seg5.mp3",
-        "hash": "8957b8a3b56f76ad713a750c84964de348f4fc5e3369ae7ea6679eb20d092191"
+        "hash": "95d29010904b07ccc4e2dc943dbe253a7df08565a502ab58c6dd46504b7e2f4e"
       },
       "seg6": {
         "file": "bg/narrator/seg6.mp3",
-        "hash": "c6386f45dde43c01e955b14bf7cf36dd9d22223db3bbd2fd37f5e0771c381a55"
+        "hash": "10911198536ae8140c3e57791e448c18ac3cd33a4310fa6a3bb4cda79edb4e8f"
       },
       "seg7": {
         "file": "bg/narrator/seg7.mp3",
-        "hash": "3ef65379f43ee01fea21d94e1788f35af1e2071651a354548fc7d7f13eb4b91c"
+        "hash": "231ea2e4d9990c372b95c80dd69333269d75e6957bd8bc2f8a928d6a742bce04"
       },
       "seg8": {
         "file": "bg/narrator/seg8.mp3",
-        "hash": "098a59e11c1fe60f32afe8aca3f31e667b48b47138dec3850de84e1e667ea65c"
+        "hash": "b89a2a38cb1ce1e88b5379504a538cb45e6094ea92ad2fedf7fd18f67cfb27a0"
       },
       "seg9": {
         "file": "bg/narrator/seg9.mp3",
-        "hash": "cbace37abf2a6ad05db80dfe7a38013d61ba9dc3e62c08b7bf08dd42678721e3"
+        "hash": "4ab728703d7286f8ad8b53298555241924bef6390558b0b0c33137346081a5bd"
       },
       "spit": {
         "file": "bg/narrator/spit.mp3",
-        "hash": "35f617d1e550cf63f3a84df636bdeb6b531bb437aaf4b6b370b16d5335cd8b8a"
+        "hash": "745a16b0296f7665141da6e4fe435eba9b6eadba2e595db2fa69742130027110"
       }
     },
     "spiderman": {
       "quip1": {
         "file": "bg/spiderman/quip1.mp3",
-        "hash": "f32fceaccd54887ff1ff50cc6cf73f4a9b7284e6795fb231f74088addc1a63df"
+        "hash": "7f6863ef02277b22ce56fcc9a9087e20748042d5e2235967e4fb190582329799"
       },
       "quip2": {
         "file": "bg/spiderman/quip2.mp3",
-        "hash": "f2b6e86d4ebd87d8257b791eb37286fc1c9808a23e65328fbb7f9b02c6e17317"
+        "hash": "04d314064f69bf18f4446757ad2586890e7393eb0579e06cb51a4e236dbd98b0"
       },
       "quip3": {
         "file": "bg/spiderman/quip3.mp3",
-        "hash": "4e64bee022f712029e16e5dcb8da679908d78b19c08f6e0789e4d9d843ca50cf"
+        "hash": "3103401302630c8984c1eb501f2c4daff914b84d687e6f68ec7f0dbec2537067"
       },
       "select": {
         "file": "bg/spiderman/select.mp3",
-        "hash": "3b48214595b2bd4ff8b3ce38407653e5b536e3680561cc99e4fb7a150ebd13b5"
+        "hash": "7d61124e3d9e7e6a7c26576c58156ed0238833abcf6d05fb8e72a6eb11368cb7"
       },
       "victory": {
         "file": "bg/spiderman/victory.mp3",
-        "hash": "bf0d6a7834e5e6dbb8eb89f6d1a1519e60db36e1b6ee40b51884bb1fdd37a053"
+        "hash": "56916e5a4f1dbd4947cf3189803fa4fbf5b501f0d389a919100d43a597bc4806"
       }
     }
   },

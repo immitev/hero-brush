@@ -32,6 +32,24 @@ export function decodeKeyFile(bytes) {
 }
 
 /**
+ * Finds the ElevenLabs API key without ever printing it.
+ * Order: ELEVENLABS_API_KEY, then the file at ELEVENLABS_API_KEY_FILE, then ~/.elevenlabs-key.
+ * @returns {{ key: string | null, source: string }}
+ */
+export function resolveElevenKey(env = process.env, readFile = readFileSync, home = homedir()) {
+  const direct = (env.ELEVENLABS_API_KEY ?? '').trim();
+  if (direct) return { key: direct, source: 'env ELEVENLABS_API_KEY' };
+  const path = env.ELEVENLABS_API_KEY_FILE || join(home, '.elevenlabs-key');
+  try {
+    const key = decodeKeyFile(readFile(path));
+    if (key) return { key, source: `file ${path}` };
+    return { key: null, source: `file ${path} is empty` };
+  } catch {
+    return { key: null, source: `no key file at ${path}` };
+  }
+}
+
+/**
  * Finds the Azure Speech key without ever printing it.
  * Order: AZURE_SPEECH_KEY, then the file at AZURE_SPEECH_KEY_FILE, then ~/.pygmy-speech-key.
  * @returns {{ key: string | null, source: string }}
@@ -55,7 +73,7 @@ export function escapeXml(s) {
 }
 
 /**
- * @typedef {{ voice: string, locale?: string, style?: string, styledegree?: number, rate?: string, pitch?: string }} VoiceSpec
+ * @typedef {{ voice: string, provider?: 'azure' | 'elevenlabs', model?: string, locale?: string, style?: string, styledegree?: number, rate?: string, pitch?: string }} VoiceSpec
  */
 
 /**
@@ -104,12 +122,23 @@ const VOWELS = 'аеиоуъюяѝ';
  * A stressed final closed syllable (отвЪн, давАй, назАд) is NOT marked: Azure's Bulgarian voices
  * then add a short extra vowel at the end of the word ("отвънъ"), and they stress these words
  * on the last syllable by default anyway.
+ *
+ * With `mark: 'caps'` (ElevenLabs) the stressed vowel is written as a capital letter instead
+ * ("правИ", "венЕца"), and every listed word is marked.
  * @param {string} text
  * @param {Record<string, string | string[]> | undefined} dict
  * @param {Record<string, string>} [overrides] per-line choices for homographs
+ * @param {'acute' | 'caps'} [mark]
  */
-export function applyStress(text, dict, overrides = {}) {
+export function applyStress(text, dict, overrides = {}, mark = 'acute') {
   if (!dict) return text;
+  if (mark === 'caps') {
+    return text.replace(/\p{L}+/gu, (word) => {
+      const marked = overrides[word.toLowerCase()] ?? dict[word.toLowerCase()];
+      if (typeof marked !== 'string') return word;
+      return [...word].map((c, i) => (marked[i] && marked[i] !== marked[i].toLowerCase() && VOWELS.includes(marked[i].toLowerCase()) ? c.toUpperCase() : c)).join('');
+    });
+  }
   return text.replace(/\p{L}+/gu, (word) => {
     const key = word.toLowerCase();
     const marked = overrides[key] ?? dict[key];
@@ -143,17 +172,17 @@ export function buildJobs(lines, voices, stress = {}) {
       for (const [lineId, texts] of Object.entries(byId)) {
         const text = texts[lang];
         if (!text || !text.trim()) throw new Error(`lines.json: ${speaker}.${lineId} has no ${lang} text`);
-        const ssml = buildSsml(spec, applyStress(text, stress[lang]?.words, stress[lang]?.lines?.[`${speaker}.${lineId}`]), cfg.xmlLang, cfg.silence);
-        jobs.push({
-          lang,
-          speaker,
-          lineId,
-          text,
-          voice: spec.voice,
-          ssml,
-          hash: lineHash(spec.voice, ssml),
-          file: `${lang}/${speaker}/${lineId}.mp3`,
-        });
+        const words = stress[lang]?.words;
+        const overrides = stress[lang]?.lines?.[`${speaker}.${lineId}`];
+        const file = `${lang}/${speaker}/${lineId}.mp3`;
+        if (spec.provider === 'elevenlabs') {
+          const body = JSON.stringify({ text: applyStress(text, words, overrides, 'caps'), model_id: spec.model ?? 'eleven_v3', language_code: cfg.languageCode ?? lang });
+          jobs.push({ lang, speaker, lineId, text, provider: 'elevenlabs', voice: spec.voice, body, hash: lineHash(spec.voice, `elevenlabs
+${body}`), file });
+          continue;
+        }
+        const ssml = buildSsml(spec, applyStress(text, words, overrides), cfg.xmlLang, cfg.silence);
+        jobs.push({ lang, speaker, lineId, text, provider: 'azure', voice: spec.voice, ssml, body: ssml, hash: lineHash(spec.voice, ssml), file });
       }
     }
   }

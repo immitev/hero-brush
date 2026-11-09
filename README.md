@@ -47,6 +47,12 @@ Each speaker has its own voice: the narrator (zone prompts, countdown, praise) a
 (hero-select line, scrubbing quips, boss and victory lines). Texts live in `src/voice/lines.json`,
 voices and prosody in `src/voice/voices.json`; both the game and the generator read these files.
 
+The Bulgarian voices come from ElevenLabs (model `eleven_v3`, the speakers marked
+`"provider": "elevenlabs"` in `voices.json`): Azure's Bulgarian voices ignored the stress marks on
+some words. ElevenLabs gets the stressed vowel as a capital letter ("правИ", "венЕца"). Its key is
+read from `ELEVENLABS_API_KEY`, else the file named by `ELEVENLABS_API_KEY_FILE`, else
+`~/.elevenlabs-key`. The free plan can only use ElevenLabs' default voices through the API.
+
 `npm run voices` (also run by `npm run build`) calls Azure Speech neural TTS for every line whose
 SSML changed or whose file is missing and writes `public/voice/<lang>/<speaker>/<line>.mp3` plus
 `public/voice/manifest.json`. The generated files are committed, so builds work without a key.
