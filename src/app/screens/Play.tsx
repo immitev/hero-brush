@@ -181,6 +181,7 @@ function VictoryOverlay({ outcome, result, heroName }: { outcome: SessionOutcome
         </div>
         <div className="rinse">{t('victory.spit')}</div>
         <small className="rinse-why">{t('victory.spitWhy')}</small>
+        <small className="rinse-why">{t('victory.grownUp')}</small>
       </div>
       {result && result.unlockedItems.length > 0 && (
         <button className="btn btn-ghost ward-open" onClick={() => go('wardrobe')}>

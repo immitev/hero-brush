@@ -36,6 +36,10 @@ export function Parent() {
       ) : (
         <div className="parent-body">
           <section className="card">
+            <h3>{t('parent.howTitle')}</h3>
+            <p className="muted">{t('parent.how')}</p>
+          </section>
+          <section className="card">
             <h3>{t('parent.summary')}</h3>
             <div className="summary">
               <div>

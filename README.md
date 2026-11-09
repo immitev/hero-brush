@@ -1,9 +1,9 @@
 # Hero Brush
 
 A 3D superhero toothbrushing game for kids that runs in the browser and installs as a PWA.
-Pick a hero, then brush along for two minutes while the hero demonstrates the correct technique
-(45° to the gum, small circles, vertical flicks behind the front teeth, flat on the chewing
-surfaces, tongue last) on a giant set of teeth whose plaque clears exactly where the brush goes.
+Pick a hero, then brush along for two minutes while the hero demonstrates a child-friendly
+technique for ages 6-9 (small gentle circles along the gum, upright strokes behind the front teeth,
+flat on the chewing surfaces, tongue last) on a giant set of teeth whose plaque clears exactly where the brush goes.
 
 Status: **playable MVP** — a two-minute brushing lesson with a superhero coach. (Milestones
 M0-M6 of [PLAN.md](PLAN.md), with the monster/boss gameplay replaced by technique teaching;
@@ -70,12 +70,16 @@ Add `?fast=1` to the URL to run the game clock at 10x (a full session takes 12 s
   milestones of total stars or best day streak (`src/game/wardrobe.ts`); nothing is spent. New
   unlocks are announced on the victory screen.
 - **The brushing lesson (2:00)**: one scene, no monsters. The hero holds a realistic toothbrush
-  (rectangular head with bristle tufts, angled neck, pea of striped paste) and demonstrates the
-  modified Bass technique on a giant, anatomically shaped set of teeth, segment by segment:
-  - outer surfaces (4 × 15 s, top/bottom × left/right): bristles at **45° to the gumline**, small
-    gentle circles over two teeth at a time, drifting along the row, finishing each spot with a
-    sweep away from the gum;
-  - inner surfaces of the back teeth (2 × 10 s): the same 45° circles;
+  (rectangular head with bristle tufts, angled neck, pea of striped paste) and  demonstrates a
+  simplified, child-friendly technique on a giant, anatomically shaped set of teeth, segment by
+  segment. There is no single "correct" brushing method (UK *Delivering Better Oral Health*, ch. 8:
+  no technique has been shown to be superior); the game follows common advice for 6-9-year-olds
+  (NHS / Childsmile: small gentle circles along the gumline, two teeth at a time, two minutes, adult
+  help or checking until about age 7-8) and keeps the brush tilted slightly towards the gum, a mild
+  form of the Bass technique that small studies found effective at these ages:
+  - outer surfaces (4 × 15 s, top/bottom × left/right): bristles tilted towards the gumline, small
+    gentle circles over two teeth at a time, drifting along the row;
+  - inner surfaces of the back teeth (2 × 10 s): the same small circles near the gum;
   - inner surfaces of the front teeth (2 × 8 s): brush held **vertically**, flicks away from the
     gum (down for the top teeth, up for the bottom);
   - chewing surfaces (15 s): brush **flat**, short back-and-forth scrubs, bottom row then top;
@@ -91,7 +95,10 @@ Add `?fast=1` to the URL to run the game clock at 10x (a full session takes 12 s
   brush path, which is always shown from the child's point of view.
 - **Voice**: the narrator coaches each segment (technique cues, "gentle pressure", "spit, don't
   rinse"), heroes drop short technique quips; all lines are neural TTS generated at build time
-  (`npm run voices`, EN + BG), with speech-synthesis fallback.
+  (`npm run voices`, EN + BG), with speech-synthesis fallback. Bulgarian word stress is set
+  explicitly: `src/voice/stress.json` lists every word of the Bulgarian lines with its stressed
+  vowel in capitals, and the generator sends it to Azure as a combining acute accent (the on-screen
+  texts stay unmarked; a test fails if a new word is missing).
 - **Camera**: a per-stop camera pose keeps the brush head large and the angle readable
   (outside from the cheek side, inside the arch for the inner surfaces, above/below for the
   chewing surfaces); the choreography tests prove head and hero are on screen at desktop and
@@ -100,8 +107,9 @@ Add `?fast=1` to the URL to run the game clock at 10x (a full session takes 12 s
   day streak, session history in IndexedDB (Dexie), suit unlocks. Only the best session per
   day and slot (morning/evening, taken from the session's start time) counts towards totals and
   unlocks, so repeating a session does not farm stars.
+- **Victory screen** reminds the child to spit, not rinse, and to ask a grown-up to check.
 - **Parent area** behind a press-and-hold (3 s) + arithmetic gate (new question after every
-  miss, 60 s lockout after three misses): summary, history table, language, music/SFX/voice
+  miss, 60 s lockout after three misses): a short note on how brushing is taught, summary, history table, language, music/SFX/voice
   volume, voice mute, graphics quality (low/high), delete all data.
 - **PWA**: manifest, generated icons (incl. maskable), Workbox precache of all assets for offline
   play, in-app "new version" prompt.

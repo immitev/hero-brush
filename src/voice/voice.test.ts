@@ -5,6 +5,7 @@ import { VOICE_CUES } from '../game/voiceCues';
 import { HEROES } from '../heroes';
 import { LANGS } from '../i18n/lang';
 import { HERO_LINES, LINES, SPEAKERS, VOICES, lineText } from './lines';
+import stress from './stress.json';
 
 describe('voice lines', () => {
   it('every line has text in every language', () => {
@@ -78,5 +79,22 @@ describe('voice queue policy', () => {
     expect(decide('normal', 'low', 0)).toBe('replace');
     expect(decide('normal', 'normal', 0)).toBe('enqueue');
     expect(decide('normal', 'high', 0)).toBe('enqueue');
+  });
+  it('every Bulgarian word of 2+ syllables has a stress entry', () => {
+    const dict: Record<string, string> = stress.bg;
+    const missing = new Set<string>();
+    for (const speaker of SPEAKERS)
+      for (const id of Object.keys(LINES[speaker]))
+        for (const [w] of lineText('bg', speaker, id).toLowerCase().matchAll(/[а-яѝ]+/g))
+          if ((w.match(/[аеиоуъюя]/g) ?? []).length > 1 && !dict[w]) missing.add(w);
+    expect([...missing]).toEqual([]);
+  });
+
+  it('stress entries mark exactly one vowel of the same word', () => {
+    for (const [word, marked] of Object.entries(stress.bg as Record<string, string>)) {
+      expect(marked.toLowerCase(), word).toBe(word);
+      expect(marked.match(/[АЕИОУЪЮЯ]/g)?.length, word).toBe(1);
+      expect(marked.replace(/[АЕИОУЪЮЯ]/, '').match(/[А-Я]/), word).toBeNull();
+    }
   });
 });

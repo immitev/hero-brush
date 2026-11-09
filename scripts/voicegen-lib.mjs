@@ -93,12 +93,37 @@ export function lineHash(voiceName, ssml) {
   return createHash('sha256').update(`${voiceName}\n${ssml}`).digest('hex');
 }
 
+const VOWELS = 'аеиоуъюяѝ';
+
+/**
+ * Marks word stress for the TTS engine: every word found in `dict` (lower-case word -> the same
+ * word with its stressed vowel in upper case) gets a combining acute accent (U+0301) after that
+ * vowel. The original capitalisation is kept. Unknown words are left alone.
+ * @param {string} text
+ * @param {Record<string, string> | undefined} dict
+ */
+export function applyStress(text, dict) {
+  if (!dict) return text;
+  return text.replace(/\p{L}+/gu, (word) => {
+    const marked = dict[word.toLowerCase()];
+    if (!marked) return word;
+    let out = '';
+    for (let i = 0; i < word.length; i++) {
+      out += word[i];
+      const m = marked[i];
+      if (m && m !== m.toLowerCase() && VOWELS.includes(m.toLowerCase())) out += '́';
+    }
+    return out;
+  });
+}
+
 /**
  * Expands lines.json + voices.json into one job per (lang, speaker, line).
  * @param {Record<string, Record<string, Record<string, string>>>} lines speaker -> lineId -> lang -> text
  * @param {{ languages: Record<string, { xmlLang: string, silence?: { leading?: string, tailing?: string }, speakers: Record<string, VoiceSpec> }> }} voices
+ * @param {Record<string, Record<string, string>>} [stress] lang -> stress dictionary (see applyStress)
  */
-export function buildJobs(lines, voices) {
+export function buildJobs(lines, voices, stress = {}) {
   const jobs = [];
   for (const [lang, cfg] of Object.entries(voices.languages)) {
     for (const [speaker, byId] of Object.entries(lines)) {
@@ -107,7 +132,7 @@ export function buildJobs(lines, voices) {
       for (const [lineId, texts] of Object.entries(byId)) {
         const text = texts[lang];
         if (!text || !text.trim()) throw new Error(`lines.json: ${speaker}.${lineId} has no ${lang} text`);
-        const ssml = buildSsml(spec, text, cfg.xmlLang, cfg.silence);
+        const ssml = buildSsml(spec, applyStress(text, stress[lang]), cfg.xmlLang, cfg.silence);
         jobs.push({
           lang,
           speaker,

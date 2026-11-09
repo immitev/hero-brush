@@ -27,7 +27,8 @@ const MAX_ATTEMPTS = 6;
 const readJson = (p) => JSON.parse(readFileSync(p, 'utf8'));
 const lines = readJson(join(root, 'src', 'voice', 'lines.json'));
 const voices = readJson(join(root, 'src', 'voice', 'voices.json'));
-const jobs = buildJobs(lines, voices);
+const { _comment, ...stress } = readJson(join(root, 'src', 'voice', 'stress.json'));
+const jobs = buildJobs(lines, voices, stress);
 
 let previous = {};
 try {

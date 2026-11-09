@@ -1,6 +1,7 @@
 import { describe, expect, it } from 'vitest';
 import { join } from 'node:path';
 import {
+  applyStress,
   buildJobs,
   buildManifest,
   buildSsml,
@@ -145,5 +146,22 @@ describe('retries', () => {
     expect(retryDelayMs(1, null)).toBe(4000);
     expect(retryDelayMs(3, null)).toBe(16000);
     expect(retryDelayMs(10, null)).toBe(60000);
+  });
+});
+
+describe('applyStress', () => {
+  const dict = { четката: 'чЕтката', венеца: 'венецА' };
+  it('adds a combining acute after the stressed vowel and keeps capitals', () => {
+    expect(applyStress('Четката до венеца!', dict)).toBe('Че́тката до венеца́!');
+  });
+  it('leaves unknown words and missing dictionaries alone', () => {
+    expect(applyStress('Малки кръгчета.', dict)).toBe('Малки кръгчета.');
+    expect(applyStress('Четката', undefined)).toBe('Четката');
+  });
+  it('is applied to the SSML of the matching language only', () => {
+    const voices = { languages: { bg: { xmlLang: 'bg-BG', speakers: { n: { voice: 'V' } } }, en: { xmlLang: 'en-US', speakers: { n: { voice: 'E' } } } } };
+    const jobs = buildJobs({ n: { a: { en: 'Brush', bg: 'Четката' } } }, voices, { bg: dict });
+    expect(jobs.find((j) => j.lang === 'bg').ssml).toContain('Че́тката');
+    expect(jobs.find((j) => j.lang === 'bg').text).toBe('Четката');
   });
 });
